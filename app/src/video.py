@@ -24,7 +24,8 @@ class Video:
         self.tracked = False
 
         self.cropp = [0, 0, self.shape[0], self.shape[1]]
-        self.mask = []
+        self.mask = np.array([])
+
         self.roi = {}
 
         cap.release()
@@ -47,16 +48,16 @@ class Video:
         return frame[x[0]:x[1], y[0]:y[1]]
 
     def apply_mask(self, frame):
-        frame_masked = cv2.bitwise_and(frame, frame, self.mask)
+        frame_masked = cv2.bitwise_and(frame, self.mask)
         return frame_masked
 
     def preprocess_frame(self, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame = self.cropframe(frame)
+        # frame = self.cropframe(frame)
+        if self.mask.any():
+            frame = self.apply_mask(frame)
         if self.dsmpl < 1:
             frame = self.resizeframe(frame)
-        if self.mask:
-            frame = self.apply_mask(frame)
         return frame
 
     def make_bg(self, num_frames=50, bgfile=False):
@@ -77,12 +78,9 @@ class Video:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, framenum)
                 ret, frame = cap.read()
                 if ret:
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    if self.dsmpl < 1:
-                        gray = self.resizeframe(gray)
-                    gray = self.cropframe(gray)
+                    frame = self.preprocess_frame(frame)
 
-                    collection[idx, :, :] = gray
+                    collection[idx, :, :] = frame
                     grabbed = True
 
                 else:
@@ -101,3 +99,14 @@ class Video:
         else:
             # TODO: Add handler
             pass
+
+    def generate_mask(self, points):
+        points = np.array(points)
+        # size1 = int((self.cropp[2] - self.cropp[0]) * self.dsmpl)
+        # size2 = int((self.cropp[3] - self.cropp[1]) * self.dsmpl)
+        size1 = self.shape[0]
+        size2 = self.shape[1]
+
+        canvas = np.zeros((size1, size2), dtype=np.uint8)
+        mask = cv2.fillPoly(canvas, [points], (255, 255, 255))
+        self.mask = mask

@@ -1,3 +1,5 @@
+import numpy as np
+
 from app.src.tracker import Tracker, save_outputv
 from app.src.video import Video
 import cv2
@@ -6,12 +8,17 @@ vid = Video("test.avi")
 vid.dsmpl = 0.5
 vid.tr_range = (300, 1000)
 vid.bg_ref[0] = "median"
+points = [[279, 101], [1169, 114], [1164, 699], [1440, 707], [1440, 983], [287, 986]]
+vid.generate_mask(points)
 vid.make_bg()
 
-while True:
-    cv2.imshow('ref', vid.bg_ref[1] / 255.)
-    if cv2.waitKey(30) == ord('q'):
-        break
+cv2.imshow("bg", vid.bg_ref[1] / 255.)
+cv2.waitKey(0)
+
+# while True:
+#     cv2.imshow('ref', vid.bg_ref[1] / 255.)
+#     if cv2.waitKey(30) == ord('q'):
+#         break
 
 tracker = Tracker(params={"bg_ref": vid.bg_ref[1], "thresh": 99.5})
 

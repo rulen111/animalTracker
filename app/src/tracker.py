@@ -69,10 +69,7 @@ def save_outputv(vid: Video, df):
     cap.set(cv2.CAP_PROP_POS_FRAMES, vid.tr_range[0])  # set starting frame
 
     ret, frame = cap.read()  # read frame
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    if vid.dsmpl < 1:
-        frame = vid.resizeframe(frame)
-    frame = vid.cropframe(frame)
+    frame = vid.preprocess_frame(frame)
 
     height, width = int(frame.shape[0]), int(frame.shape[1])
 
@@ -87,10 +84,7 @@ def save_outputv(vid: Video, df):
     for f in tqdm(range(vid.tr_range[1] - vid.tr_range[0])):
         ret, frame = cap.read()
         if ret:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if vid.dsmpl < 1:
-                frame = vid.resizeframe(frame)
-            frame = vid.cropframe(frame)
+            frame = vid.preprocess_frame(frame)
 
             position = (int(df['X'][f]), int(df['Y'][f]))
             cv2.drawMarker(img=frame, position=position, color=255)
