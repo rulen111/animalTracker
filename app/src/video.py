@@ -2,31 +2,59 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 import ntpath
+import pickle
 
 
-class Video:
-    def __init__(self, fpath):
+# TODO: Add decorator for saving class state
+
+class Video(object):
+    def __init__(self, fpath=None):
+        self.fpath = None
+        self.folder = None
+        self.fname = None
+
+        self.bg_fpath = ""
+        self.dsmpl = 1.
+        self.bg_ref = ["median", None]
+
+        self.frame_cnt = None
+        self.frame_rate = None
+        self.shape = None
+        self.tr_range = None
+
+        self.tracked = False
+
+        self.cropp = None
+        self.mask = np.array([])
+
+        self.roi = {}
+
+        if fpath:
+            self.load_video(fpath)
+
+    def save_state(self, fpath):
+        state = self.__dict__
+        with open(fpath, 'wb') as f:
+            pickle.dump(state, f)
+
+    def load_state(self, fpath):
+        with open(fpath, 'rb') as f:
+            self.__dict__ = pickle.load(f)
+
+    def load_video(self, fpath):
+        cap = cv2.VideoCapture(fpath)
+
         self.fpath = fpath
         self.folder = ntpath.dirname(fpath)
         self.fname = ntpath.basename(fpath)
 
-        self.bg_fpath = ""
-        self.dsmpl = 1.
-        self.bg_ref = ["", None]
-
-        cap = cv2.VideoCapture(fpath)
         self.frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.frame_rate = cap.get(cv2.CAP_PROP_FPS)
         self.shape = (int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
                       int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)))
         self.tr_range = [0, self.frame_cnt]
 
-        self.tracked = False
-
         self.cropp = [0, 0, self.shape[0], self.shape[1]]
-        self.mask = np.array([])
-
-        self.roi = {}
 
         cap.release()
 
@@ -70,7 +98,7 @@ class Video:
         h, w = frame.shape[0], frame.shape[1]
         frames = np.linspace(start=self.tr_range[0], stop=self.tr_range[1], num=num_frames)
 
-        collection = np.zeros((num_frames, h, w))
+        collection = np.zeros((num_frames, h, w), dtype=np.uint8)
         print(f"Computing background reference image")
         for (idx, framenum) in enumerate(tqdm(frames)):
             grabbed = False

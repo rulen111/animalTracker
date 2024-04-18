@@ -1,3 +1,5 @@
+import pickle
+
 from scipy.ndimage import center_of_mass
 from app.src.video import Video
 import cv2
@@ -6,10 +8,20 @@ from tqdm import tqdm
 import pandas as pd
 
 
-class Tracker:
+class Tracker(object):
     def __init__(self, method="diff", params=None):
         self.method = method
         self.params = params
+
+    def save_state(self, fpath):
+        state = self.__dict__
+        print(state)
+        with open(fpath, 'wb') as f:
+            pickle.dump(state, f)
+
+    def load_state(self, fpath):
+        with open(fpath, 'rb') as f:
+            self.__dict__ = pickle.load(f)
 
     def locate_diff(self, frame, mask):
         dif = np.absolute(frame - self.params["bg_ref"]).astype('int16')
