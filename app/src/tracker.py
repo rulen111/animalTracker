@@ -11,8 +11,11 @@ class Tracker:
         self.method = method
         self.params = params
 
-    def locate_diff(self, frame):
+    def locate_diff(self, frame, mask):
         dif = np.absolute(frame - self.params["bg_ref"]).astype('int16')
+        # if mask.any():
+        #     mask = np.array(mask, dtype=bool)
+        #     dif[~mask] = 0
 
         dif[dif < np.percentile(dif, self.params["thresh"])] = 0
 
@@ -35,7 +38,7 @@ class Tracker:
             if ret:
                 frame = vid.preprocess_frame(frame)
                 if self.method == "diff":
-                    dif, com, frame = self.locate_diff(frame)
+                    dif, com, frame = self.locate_diff(frame, vid.mask)
 
                 xvec[f] = com[1]
                 yvec[f] = com[0]

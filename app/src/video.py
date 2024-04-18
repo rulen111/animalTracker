@@ -109,4 +109,5 @@ class Video:
 
         canvas = np.zeros((size1, size2), dtype=np.uint8)
         mask = cv2.fillPoly(canvas, [points], (255, 255, 255))
+        # mask = cv2.fillPoly(canvas, [points], 1)
         self.mask = mask

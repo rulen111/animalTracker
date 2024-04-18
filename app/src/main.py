@@ -6,7 +6,7 @@ import cv2
 
 vid = Video("test.avi")
 vid.dsmpl = 0.5
-vid.tr_range = (300, 1000)
+# vid.tr_range = (300, 1000)
 vid.bg_ref[0] = "median"
 points = [[279, 101], [1169, 114], [1164, 699], [1440, 707], [1440, 983], [287, 986]]
 vid.generate_mask(points)
