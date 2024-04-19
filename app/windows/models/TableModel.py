@@ -11,6 +11,9 @@ class TableModel(QtCore.QAbstractTableModel):
         if role == Qt.DisplayRole:
             return self._data[index.row()][index.column()]
 
+    def get_data(self):
+        return self._data
+
     def rowCount(self, index):
         return len(self._data)
 
@@ -32,10 +35,12 @@ class TableModel(QtCore.QAbstractTableModel):
     #         if orientation == Qt.Vertical:
     #             return str(self._data.index[section])
     #
-    # def setData(self, index, value, role):
-    #     if role == Qt.EditRole:
-    #         # Set the value into the frame.
-    #         self._data[index.row()][index.column()] = value
-    #         return True
-    #
-    #     return False
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            # Set the value into the frame.
+            self.beginResetModel()
+            self._data[index.row()][index.column()] = value
+            self.endResetModel()
+            return True
+
+        return False
