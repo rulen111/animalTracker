@@ -11,7 +11,7 @@ import pandas as pd
 class Tracker(object):
     def __init__(self, method="diff", params=None):
         self.method = method
-        self.params = params
+        self.params = params if params else {}
 
     def save_state(self, fpath):
         state = self.__dict__
@@ -23,11 +23,8 @@ class Tracker(object):
         with open(fpath, 'rb') as f:
             self.__dict__ = pickle.load(f)
 
-    def locate_diff(self, frame, mask):
+    def locate_diff(self, frame):
         dif = np.absolute(frame - self.params["bg_ref"]).astype('int16')
-        # if mask.any():
-        #     mask = np.array(mask, dtype=bool)
-        #     dif[~mask] = 0
 
         dif[dif < np.percentile(dif, self.params["thresh"])] = 0
 
@@ -35,7 +32,7 @@ class Tracker(object):
 
         return dif, com, frame
 
-    def do_tracking(self, vid, track=None):
+    def do_tracking(self, vid):
         cap = cv2.VideoCapture(vid.fpath)
         cap.set(cv2.CAP_PROP_POS_FRAMES, vid.tr_range[0])
 
@@ -50,7 +47,7 @@ class Tracker(object):
             if ret:
                 frame = vid.preprocess_frame(frame)
                 if self.method == "diff":
-                    dif, com, frame = self.locate_diff(frame, vid.mask)
+                    dif, com, frame = self.locate_diff(frame)
 
                 xvec[f] = com[1]
                 yvec[f] = com[0]
@@ -65,6 +62,7 @@ class Tracker(object):
 
         cap.release()
         print('total frames processed: {f}\n'.format(f=len(dvec)))
+        vid.track = [xvec, yvec, dvec]
 
         # create pandas dataframe
         df = pd.DataFrame(
@@ -79,7 +77,7 @@ class Tracker(object):
         return df
 
 
-def save_outputv(vid: Video, df):
+def save_outputv(vid: Video):
     cap = cv2.VideoCapture(vid.fpath)  # set file
     cap.set(cv2.CAP_PROP_POS_FRAMES, vid.tr_range[0])  # set starting frame
 
@@ -101,7 +99,7 @@ def save_outputv(vid: Video, df):
         if ret:
             frame = vid.preprocess_frame(frame)
 
-            position = (int(df['X'][f]), int(df['Y'][f]))
+            position = (int(vid.track[0][f]), int(vid.track[1][f]))
             cv2.drawMarker(img=frame, position=position, color=255)
             writer.write(frame)
         else:

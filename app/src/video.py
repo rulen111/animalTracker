@@ -23,6 +23,7 @@ class Video(object):
         self.tr_range = None
 
         self.tracked = False
+        self.track = np.array([])
 
         self.cropp = None
         self.mask = np.array([])

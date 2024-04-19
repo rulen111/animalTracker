@@ -1,4 +1,3 @@
-import pyforms
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlImage
 
