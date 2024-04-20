@@ -127,6 +127,7 @@ class EditTrackWindow(BaseWidget):
         df_edited = self._model.get_data()
         df_old.to_csv('coords_orig.csv', encoding='utf-8', index=False)
         df_edited.to_csv('coords_edited.csv', encoding='utf-8', index=False)
+        self.video.save_state("current_video.pckl")
 
 
 if __name__ == '__main__':
