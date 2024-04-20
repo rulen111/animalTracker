@@ -8,6 +8,10 @@ from tqdm import tqdm
 import pandas as pd
 
 
+def calc_dist(x, y, xprev, yprev):
+    return np.sqrt((y - yprev) ** 2 + (x - xprev) ** 2)
+
+
 class Tracker(object):
     def __init__(self, method="diff", params=None):
         self.method = method
@@ -52,7 +56,8 @@ class Tracker(object):
                 xvec[f] = com[1]
                 yvec[f] = com[0]
                 if f > 0:
-                    dvec[f] = np.sqrt((yvec[f] - yvec[f - 1]) ** 2 + (xvec[f] - xvec[f - 1]) ** 2)
+                    # dvec[f] = np.sqrt((yvec[f] - yvec[f - 1]) ** 2 + (xvec[f] - xvec[f - 1]) ** 2)
+                    dvec[f] = calc_dist(xvec[f], yvec[f], xvec[f - 1], yvec[f - 1])
             else:
                 f = f - 1
                 xvec = xvec[:f]  # Amend length of X vector
@@ -62,17 +67,16 @@ class Tracker(object):
 
         cap.release()
         print('total frames processed: {f}\n'.format(f=len(dvec)))
-        vid.track = [xvec, yvec, dvec]
+        # vid.track = [xvec, yvec, dvec]
 
         # create pandas dataframe
         df = pd.DataFrame(
-            {'Video': vid.fname,
-             'Start_Frame': vid.tr_range[0],
-             'Frame': np.arange(len(dvec)) + vid.tr_range[0],
-             'X': xvec,
+            {'X': xvec,
              'Y': yvec,
              'Distance_px': dvec
              })
+
+        vid.track = df
 
         return df
 
@@ -99,7 +103,8 @@ def save_outputv(vid: Video):
         if ret:
             frame = vid.preprocess_frame(frame)
 
-            position = (int(vid.track[0][f]), int(vid.track[1][f]))
+            # position = (int(vid.track[0][f]), int(vid.track[1][f]))
+            position = (int(vid.track.iloc[f, 0]), int(vid.track.iloc[f, 1]))
             cv2.drawMarker(img=frame, position=position, color=255)
             writer.write(frame)
         else:
