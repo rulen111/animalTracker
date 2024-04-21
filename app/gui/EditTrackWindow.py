@@ -1,26 +1,22 @@
+import logging
+
 import cv2
 import csv
 from PyQt5.QtWidgets import QAbstractItemView
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSettings
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlPlayer
 from pyforms.controls import ControlTableView
 from pyforms.controls import ControlImage
 from pyforms.controls import ControlSlider
 from pyforms.controls import ControlButton
+from pyforms.controls import ControlTree  # TODO:
 
 from app.src.video import Video
-from app.windows.models.TableModel import TableModel
+from app.gui.models.TableModel import TableModel
 
+CONFIG_FILE_PATH = '../config.ini'
 
-# def draw_track(frame, points):
-#     for point in points:
-#         # frame = cv2.circle(frame, (point[0], point[1]), radius=1, color=255, thickness=-1)
-#         x = int(float(point[0]))
-#         y = int(float(point[1]))
-#         frame = cv2.circle(frame, (x, y), radius=1, color=255, thickness=-1)
-#
-#     return frame
 
 def draw_track(frame, points):
     cols = points.columns
@@ -35,11 +31,13 @@ def draw_track(frame, points):
 
 class EditTrackWindow(BaseWidget):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, vid: Video, *args, **kwargs):
         BaseWidget.__init__(self, 'Редактор трека')
+        self.logger = logging.getLogger(__name__)
 
-        self.video = Video()
-        self.video.load_state("current_video.pckl")
+        # self.video = Video()
+        # self.video.load_state("current_video.pckl")
+        self.video = vid
 
         # data = [[f"{coords[0]:.6}", f"{coords[1]:.6}"]
         #         for coords in zip(self.video.track[0], self.video.track[1])]
@@ -80,6 +78,24 @@ class EditTrackWindow(BaseWidget):
             ('_frameimg', '_coordtable'),
             ('_frameslider', '_savebutton')
         ]
+
+    def __getstate__(self):
+        state = {
+            "video": self.video,
+            "multselect": self.multselect
+        }
+        return state
+
+    def save_win_state(self):
+        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        settings.setValue('EDTRWin_WindowState', self.save_form())
+
+    def load_win_state(self):
+        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+
+        state = settings.value('EDTRWin_WindowState')
+        if state:
+            self.load_form(state)
 
     def __formClosedEvent(self, event):
         self.cap.release()
@@ -125,9 +141,10 @@ class EditTrackWindow(BaseWidget):
     def __saveTrackButton(self):
         df_old = self.video.track
         df_edited = self._model.get_data()
+        self.video.track = df_edited
         df_old.to_csv('coords_orig.csv', encoding='utf-8', index=False)
         df_edited.to_csv('coords_edited.csv', encoding='utf-8', index=False)
-        self.video.save_state("current_video.pckl")
+        # self.video.save_state("current_video.pckl")
 
 
 if __name__ == '__main__':

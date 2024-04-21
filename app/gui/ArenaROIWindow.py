@@ -1,5 +1,8 @@
+import logging
+
 import cv2
 import numpy as np
+from PyQt5.QtCore import QSettings
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlImage
 from pyforms.controls import ControlSlider
@@ -10,13 +13,18 @@ from pyforms.controls import ControlText
 from app.src.video import Video
 
 
+CONFIG_FILE_PATH = '../config.ini'
+
+
 class ArenaROIWindow(BaseWidget):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, vid: Video, *args, **kwargs):
         BaseWidget.__init__(self, 'Области интереса')
+        self.logger = logging.getLogger(__name__)
 
-        self.video = Video()
-        self.video.load_state("current_video.pckl")
+        # self.video = Video()
+        # self.video.load_state("current_video.pckl")
+        self.video = vid
 
         self.points_to_draw = []
         self.draw_lines = False
@@ -51,6 +59,23 @@ class ArenaROIWindow(BaseWidget):
             ('_frameimg', '_roilist'),
             ('_frameslider', '_roiname', '_addbutton', '_clearbutton')
         ]
+
+    def __getstate__(self):
+        state = {
+            "video": self.video
+        }
+        return state
+
+    def save_win_state(self):
+        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        settings.setValue('ROIWin_WindowState', self.save_form())
+
+    def load_win_state(self):
+        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+
+        state = settings.value('ROIWin_WindowState')
+        if state:
+            self.load_form(state)
 
     def __formClosedEvent(self, event):
         self.cap.release()

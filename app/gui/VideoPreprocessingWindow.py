@@ -1,3 +1,5 @@
+import datetime
+
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlFile
 from pyforms.controls import ControlText
@@ -6,11 +8,17 @@ from pyforms.controls import ControlNumber
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlCheckBox
 
+from PyQt5.QtCore import Qt, QSettings
+
 import cv2
 import numpy as np
+import logging
 
 from app.src.video import Video
-from app.windows.PreviewWindow import PreviewWindow
+from app.gui.PreviewWindow import PreviewWindow
+
+
+CONFIG_FILE_PATH = '../config.ini'
 
 
 class VideoPreprocessingWindow(BaseWidget):
@@ -18,9 +26,10 @@ class VideoPreprocessingWindow(BaseWidget):
     def __init__(self, *args, **kwargs):
         # Video.__init__(self)
         BaseWidget.__init__(self, 'Предварительная подготовка видео')
+        self.logger = logging.getLogger(__name__)
 
         self.video = Video()
-
+        # self.video = vid
         self.points_to_draw = []
         self.draw_lines = False
 
@@ -59,6 +68,33 @@ class VideoPreprocessingWindow(BaseWidget):
             '_player'
         ]
 
+    def __getstate__(self):
+        state = {
+            "video": self.video,
+            "points_to_draw": self.points_to_draw,
+            "draw_lines": self.draw_lines
+        }
+        return state
+
+    def __save_video(self):
+        return self.video
+
+    def save_win_state(self):
+        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        settings.setValue('VPWin/WindowState', self.save_form())
+        settings.setValue('VPWin/Geometry', self.saveGeometry())
+
+    def load_win_state(self):
+        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+
+        state = settings.value('VPWin/WindowState')
+        if state:
+            self.load_form(state)
+
+        geometry = settings.value('VPWin/Geometry')
+        if geometry:
+            self.restoreGeometry(geometry)
+
     def __videoFileSelectionEvent(self):
         """
         When the videofile is selected instanciate the video in the player
@@ -90,7 +126,7 @@ class VideoPreprocessingWindow(BaseWidget):
         After setting the best parameters run the full algorithm
         """
         # super().save_state(f"{self.fname}.pckl")
-        self.video.save_state("current_video.pckl")
+        # self.video.save_state("app/gui/current_video.pckl")
 
         frame = self.video.preprocess_frame(self._player.frame)
         win = PreviewWindow(frame=frame)
