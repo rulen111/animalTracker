@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 import logging
 
+from app.gui.controls.VideoPlayer import VideoPlayer
 from app.src.video import Video
 from app.gui.PreviewWindow import PreviewWindow
 
@@ -39,7 +40,8 @@ class VideoPreprocessingWindow(BaseWidget):
         self._trend = ControlText('End')
         self._videores = ControlNumber(label='Resolution, %', default=100, minimum=0, maximum=100)
         self._chckmask = ControlCheckBox('Define mask')
-        self._player = ControlPlayer('Player')
+        # self._player = ControlPlayer('Player')
+        self._player = VideoPlayer()
         self._previewbutton = ControlButton('Preview frame')
 
         # Define the function that will be called when a file is selected
@@ -62,9 +64,10 @@ class VideoPreprocessingWindow(BaseWidget):
 
         # Define the organization of the Form Controls
         self._formset = [
-            ('_videofile', '_videores'),
-            ('_trstart', '_trend', '_chckmask'),
-            '_previewbutton',
+            ('_videofile', " ", " ", " "),
+            ('_trstart', '_videores', " ", " "),
+            ('_trend', '_chckmask', " ", " "),
+            ('_previewbutton', " ", " "),
             '_player'
         ]
 
@@ -75,6 +78,11 @@ class VideoPreprocessingWindow(BaseWidget):
             "draw_lines": self.draw_lines
         }
         return state
+
+    def __setstate__(self, state):
+        self.video = state["video"]
+        self.points_to_draw = state["points_to_draw"]
+        self.draw_lines = state["draw_lines"]
 
     def __save_video(self):
         return self.video

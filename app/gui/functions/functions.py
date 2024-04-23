@@ -1,4 +1,5 @@
 import pickle
+from pyforms.controls import ControlPlayer
 
 
 def save_videobj(vid, fpath):
@@ -8,4 +9,4 @@ def save_videobj(vid, fpath):
 
 def load_videobj(fpath, vid):
     with open(fpath, 'rb') as f:
-        vid = pickle.load(f)
+        pass

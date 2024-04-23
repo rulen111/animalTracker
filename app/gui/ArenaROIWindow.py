@@ -18,13 +18,14 @@ CONFIG_FILE_PATH = '../config.ini'
 
 class ArenaROIWindow(BaseWidget):
 
-    def __init__(self, vid: Video, *args, **kwargs):
+    # def __init__(self, vid: Video, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         BaseWidget.__init__(self, 'Области интереса')
         self.logger = logging.getLogger(__name__)
 
-        # self.video = Video()
-        # self.video.load_state("current_video.pckl")
-        self.video = vid
+        self.video = Video()
+        self.video.load_state("current_video.pckl")
+        # self.video = vid
 
         self.points_to_draw = []
         self.draw_lines = False

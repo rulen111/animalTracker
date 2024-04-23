@@ -17,13 +17,14 @@ CONFIG_FILE_PATH = '../config.ini'
 
 class TrackingWindow(BaseWidget):
 
-    def __init__(self, vid: Video, *args, **kwargs):
+    # def __init__(self, vid: Video, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         BaseWidget.__init__(self, 'Настройка трекинга')
         self.logger = logging.getLogger(__name__)
 
-        # self.video = Video()
-        # self.video.load_state("current_video.pckl")
-        self.video = vid
+        self.video = Video()
+        self.video.load_state("current_video.pckl")
+        # self.video = vid
         self.tracker = Tracker()
         # self.tracker = tracker
 
