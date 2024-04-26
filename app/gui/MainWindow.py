@@ -159,13 +159,13 @@ class MainWindow(BaseWidget):
                 self.session.windows[0][1]
                 ],
             1: ["Настройка трекинг",
-                TrackingWindow(self.session.storage["video"]) if self.session.reached == 1 else self.session.windows[1][1]
+                TrackingWindow(**self.session.storage["video"]) if self.session.reached == 1 else self.session.windows[1][1]
                 ],
             2: ["Редактор трека",
-                EditTrackWindow(self.session.storage["video"]) if self.session.reached == 2 else self.session.windows[2][1]
+                EditTrackWindow(**self.session.storage["video"]) if self.session.reached == 2 else self.session.windows[2][1]
                 ],
             3: ["Области интереса",
-                ArenaROIWindow(self.session.storage["video"]) if self.session.reached == 3 else self.session.windows[3][1]
+                ArenaROIWindow(**self.session.storage["video"]) if self.session.reached == 3 else self.session.windows[3][1]
                 ]
         }
 
@@ -174,14 +174,15 @@ class MainWindow(BaseWidget):
         if ((self.session.reached < (len(self.session.windows.keys()) - 1))
                 and (self.session.reached < self.session.current_window_idx)):
             self.session.reached += 1
-            self.session.storage["video"] = self.current_window.video
+            self.session.storage["video"] = self.current_window.get_video_state()
             self.__update_windows()
 
         if self.session.current_window_idx < len(self.session.windows.keys()):
             self.session.windows[self.session.current_window_idx - 1][1] = self.current_window
-            self.session.storage["video"] = self.current_window.video
+            self.session.storage["video"] = self.current_window.get_video_state()
             self.current_window = self.session.windows[self.session.current_window_idx][1]
-            self.current_window.video = self.session.storage["video"]
+            # self.current_window.video = self.session.storage["video"]
+            self.current_window.init_video(**self.session.storage["video"])
             self._panel.value = self.current_window
         else:
             return
@@ -204,10 +205,11 @@ class MainWindow(BaseWidget):
         # self.current_window.save_win_state()
         if self.session.current_window_idx > 0:
             self.session.windows[self.session.current_window_idx][1] = self.current_window
-            self.session.storage["video"] = self.current_window.video
+            self.session.storage["video"] = self.current_window.get_video_state()
             self.session.current_window_idx -= 1
             self.current_window = self.session.windows[self.session.current_window_idx][1]
-            self.current_window.video = self.session.storage["video"]
+            # self.current_window.video = self.session.storage["video"]
+            self.current_window.init_video(**self.session.storage["video"])
             # self.current_window.load_win_state()
             self._panel.value = self.current_window
         else:

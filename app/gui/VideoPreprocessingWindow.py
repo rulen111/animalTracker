@@ -22,26 +22,32 @@ from app.gui.PreviewWindow import PreviewWindow
 CONFIG_FILE_PATH = '../config.ini'
 
 
-class VideoPreprocessingWindow(BaseWidget):
+class VideoPreprocessingWindow(Video, BaseWidget):
 
     def __init__(self, *args, **kwargs):
-        # Video.__init__(self)
+        Video.__init__(self, *args, **kwargs)
         BaseWidget.__init__(self, 'Предварительная подготовка видео')
         self.logger = logging.getLogger(__name__)
 
-        self.video = Video()
+        # self.video = Video()
         # self.video = vid
-        self.points_to_draw = []
-        self.draw_lines = False
+        self.points_to_draw = kwargs.get("points_to_draw", [])
+        self.draw_lines = kwargs.get("draw_lines", False)
 
         # Definition of the forms fields
         self._videofile = ControlFile('Video')
-        self._trstart = ControlText('Start')
-        self._trend = ControlText('End')
-        self._videores = ControlNumber(label='Resolution, %', default=100, minimum=0, maximum=100)
+        videofile = kwargs.get("_videofile.value", self.fpath)
+        if videofile:
+            self._videofile.value = videofile
+        self._trstart = ControlText('Start', default=str(kwargs.get("_trstart.value", 0)))
+        self._trend = ControlText('End', default=str(kwargs.get("_trend.value", 0)))
+        self._videores = ControlNumber(label='Resolution, %', default=kwargs.get("_videores.value", 100),
+                                       minimum=0, maximum=100)
         self._chckmask = ControlCheckBox('Define mask')
+        self._chckmask.value = kwargs.get("_chckmask.value", np.any(self.mask))
         # self._player = ControlPlayer('Player')
         self._player = VideoPlayer()
+        self._player.value = self._videofile.value
         self._previewbutton = ControlButton('Preview frame')
 
         # Define the function that will be called when a file is selected
@@ -72,45 +78,83 @@ class VideoPreprocessingWindow(BaseWidget):
         ]
 
     def __getstate__(self):
-        state = {
-            "video": self.video,
-            "points_to_draw": self.points_to_draw,
-            "draw_lines": self.draw_lines
-        }
+        state = self.get_video_state()
+        state["points_to_draw"] = self.points_to_draw
+        state["draw_lines"] = self.draw_lines
+        state["_videofile.value"] = self._videofile.value
+        state["_trstart.value"] = self._trstart.value
+        state["_trend.value"] = self._trend.value
+        state["_videores.value"] = self._videores.value
+        state["_chckmask.value"] = self._chckmask.value
+
         return state
 
     def __setstate__(self, state):
-        self.video = state["video"]
-        self.points_to_draw = state["points_to_draw"]
-        self.draw_lines = state["draw_lines"]
+        self.init_video(**state)
 
-    def __save_video(self):
-        return self.video
+        self.points_to_draw = state.get("points_to_draw", [])
+        self.draw_lines = state.get("draw_lines", False)
+        videofile = state.get("_videofile.value", self.fpath)
+        if videofile:
+            self._videofile.value = videofile
+            self._player.value = self._videofile.value
+        self._trstart.value = state.get("_trstart.value", 0)
+        self._trend.value = state.get("_trend.value", 0)
+        self._videores.value = state.get("_videores.value", 100)
+        self._chckmask.value = state.get("_chckmask.value", np.any(self.mask))
 
-    def save_win_state(self):
-        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
-        settings.setValue('VPWin/WindowState', self.save_form())
-        settings.setValue('VPWin/Geometry', self.saveGeometry())
+    def init_video(self, *args, **kwargs):
+        # for key, value in kwargs.items():
+        #     if key in self.__dict__.keys():
+        #         self.__dict__[key] = value
+        self.__dict__.update(kwargs)
 
-    def load_win_state(self):
-        settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+    def get_video_state(self):
+        state = {
+            "fpath": self.fpath,
+            "folder": self.folder,
+            "fname": self.fname,
+            "bg_fpath": self.bg_fpath,
+            "dsmpl": self.dsmpl,
+            "bg_ref": self.bg_ref,
+            "frame_cnt": self.frame_cnt,
+            "frame_rate": self.frame_rate,
+            "shape": self.shape,
+            "tr_range": self.tr_range,
+            "tracked": self.tracked,
+            "track": self.track,
+            "mask": self.mask,
+            "roi": self.roi
+        }
 
-        state = settings.value('VPWin/WindowState')
-        if state:
-            self.load_form(state)
+        return state
 
-        geometry = settings.value('VPWin/Geometry')
-        if geometry:
-            self.restoreGeometry(geometry)
+    # def __save_video(self):
+    #     return self.video
+    #
+    # def save_win_state(self):
+    #     settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+    #     settings.setValue('VPWin/WindowState', self.save_form())
+    #     settings.setValue('VPWin/Geometry', self.saveGeometry())
+    #
+    # def load_win_state(self):
+    #     settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+    #
+    #     state = settings.value('VPWin/WindowState')
+    #     if state:
+    #         self.load_form(state)
+    #
+    #     geometry = settings.value('VPWin/Geometry')
+    #     if geometry:
+    #         self.restoreGeometry(geometry)
 
     def __videoFileSelectionEvent(self):
         """
         When the videofile is selected instanciate the video in the player
         """
-        self.video.load_video(self._videofile.value)
-        self.points_to_draw = []
-        self.draw_lines = False
+        Video.__init__(self, fpath=self._videofile.value)
         self._player.value = self._videofile.value
+        self._trend.value = str(self.tr_range[1])
 
     def __process_frame(self, frame):
         """
@@ -136,7 +180,8 @@ class VideoPreprocessingWindow(BaseWidget):
         # super().save_state(f"{self.fname}.pckl")
         # self.video.save_state("app/gui/current_video.pckl")
 
-        frame = self.video.preprocess_frame(self._player.frame)
+        # frame = self.video.preprocess_frame(self._player.frame)
+        frame = self.preprocess_frame(self._player.frame)
         win = PreviewWindow(frame=frame)
         win.parent = self
         win.show()
@@ -153,20 +198,24 @@ class VideoPreprocessingWindow(BaseWidget):
     def __enterKeyPressEvent(self, event):
         if event.key() == 16777220 and len(self.points_to_draw) >= 3:
             self.draw_lines = True
-            self.video.generate_mask(self.points_to_draw)
+            # self.video.generate_mask(self.points_to_draw)
+            self.generate_mask(self.points_to_draw)
             # self._player.process_frame_event(self._player.frame)
             self._player.refresh()
 
         return event
 
     def __trstartChangeEvent(self):
-        self.video.tr_range[0] = int(self._trstart.value)
+        # self.video.tr_range[0] = int(self._trstart.value)
+        self.tr_range[0] = int(self._trstart.value)
 
     def __trendChangeEvent(self):
-        self.video.tr_range[1] = int(self._trend.value)
+        # self.video.tr_range[1] = int(self._trend.value)
+        self.tr_range[1] = int(self._trend.value)
 
     def __videoresChangeEvent(self):
-        self.video.dsmpl = self._videores.value / 100
+        # self.video.dsmpl = self._videores.value / 100
+        self.dsmpl = self._videores.value / 100
 
     def __chckmaskChangedEvent(self):
         if self._chckmask.value:
@@ -174,7 +223,8 @@ class VideoPreprocessingWindow(BaseWidget):
         else:
             self.draw_lines = False
             self.points_to_draw = []
-            self.video.mask = np.array([])
+            # self.video.mask = np.array([])
+            self.mask = np.array([])
             self._player.refresh()
 
 

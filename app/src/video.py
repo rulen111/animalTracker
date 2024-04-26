@@ -8,46 +8,47 @@ import pickle
 # TODO: Add decorator for saving class state
 
 class Video(object):
-    def __init__(self, fpath=None):
-        self.fpath = None
-        self.folder = None
-        self.fname = None
+    def __init__(self, *args, **kwargs):
+        self.fpath = kwargs.get("fpath", None)
+        self.folder = kwargs.get("folder", None)
+        self.fname = kwargs.get("fname", None)
 
-        self.bg_fpath = ""
-        self.dsmpl = 1.
-        self.bg_ref = ["median", None]
+        self.bg_fpath = kwargs.get("bg_fpath", "")
+        self.dsmpl = kwargs.get("dsmpl", 1.)
+        self.bg_ref = kwargs.get("bg_ref", ["median", None])
 
-        self.frame_cnt = None
-        self.frame_rate = None
-        self.shape = None
-        self.tr_range = None
+        self.frame_cnt = kwargs.get("frame_cnt", None)
+        self.frame_rate = kwargs.get("frame_rate", None)
+        self.shape = kwargs.get("shape", None)
+        self.tr_range = kwargs.get("tr_range", None)
 
-        self.tracked = False
-        self.track = np.array([])
+        self.tracked = kwargs.get("tracked", False)
+        self.track = kwargs.get("track", np.array([]))
 
-        self.cropp = None
-        self.mask = np.array([])
+        self.mask = kwargs.get("mask", np.array([]))
 
-        self.roi = {}
+        self.roi = kwargs.get("roi", {})
 
-        if fpath:
-            self.load_video(fpath)
+        if self.fpath and not self.fname:
+            try:
+                self.load_video()
+            except Exception as e:
+                print(e)
 
-    def save_state(self, fpath):
-        state = self.__dict__
-        with open(fpath, 'wb') as f:
-            pickle.dump(state, f)
+    # def save_state(self, fpath):
+    #     state = self.__dict__
+    #     with open(fpath, 'wb') as f:
+    #         pickle.dump(state, f)
+    #
+    # def load_state(self, fpath):
+    #     with open(fpath, 'rb') as f:
+    #         self.__dict__ = pickle.load(f)
 
-    def load_state(self, fpath):
-        with open(fpath, 'rb') as f:
-            self.__dict__ = pickle.load(f)
+    def load_video(self):
+        cap = cv2.VideoCapture(self.fpath)
 
-    def load_video(self, fpath):
-        cap = cv2.VideoCapture(fpath)
-
-        self.fpath = fpath
-        self.folder = ntpath.dirname(fpath)
-        self.fname = ntpath.basename(fpath)
+        self.folder = ntpath.dirname(self.fpath)
+        self.fname = ntpath.basename(self.fpath)
 
         self.frame_cnt = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.frame_rate = cap.get(cv2.CAP_PROP_FPS)
@@ -55,14 +56,12 @@ class Video(object):
                       int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)))
         self.tr_range = [0, self.frame_cnt]
 
-        self.cropp = [0, 0, self.shape[0], self.shape[1]]
-
         cap.release()
 
     def copy_params(self, other):
         pass
 
-    def resizeframe(self, frame):
+    def resize_frame(self, frame):
         frame_rs = cv2.resize(frame,
                               (
                                   int(frame.shape[1] * self.dsmpl),
@@ -71,10 +70,10 @@ class Video(object):
                               cv2.INTER_AREA)
         return frame_rs
 
-    def cropframe(self, frame):
-        x = (self.cropp[0], self.cropp[2])
-        y = (self.cropp[1], self.cropp[3])
-        return frame[x[0]:x[1], y[0]:y[1]]
+    # def cropframe(self, frame):
+    #     x = (self.cropp[0], self.cropp[2])
+    #     y = (self.cropp[1], self.cropp[3])
+    #     return frame[x[0]:x[1], y[0]:y[1]]
 
     def apply_mask(self, frame):
         frame_masked = cv2.bitwise_and(frame, self.mask)
@@ -86,7 +85,7 @@ class Video(object):
         if self.mask.any():
             frame = self.apply_mask(frame)
         if self.dsmpl < 1:
-            frame = self.resizeframe(frame)
+            frame = self.resize_frame(frame)
         return frame
 
     def make_bg(self, num_frames=50, bgfile=False):

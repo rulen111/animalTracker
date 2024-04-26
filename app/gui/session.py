@@ -17,8 +17,8 @@ class Session(object):
         self.logger = logging.getLogger(__name__)
 
         self.storage = {
-            "video": Video(),
-            "tracker": Tracker()
+            "video": {},
+            "tracker": {}
         } if "storage" not in kwargs.keys() else kwargs["storage"]
 
         self.reached = 0 if "reached" not in kwargs.keys() else kwargs["reached"]
@@ -30,19 +30,12 @@ class Session(object):
             3: ["Области интереса", ArenaROIWindow]
         } if "windows" not in kwargs.keys() else kwargs["windows"]
 
-    def __setstate__(self, state): # TODO: Redefine to serialize and deserealize
-        self.logger = state["logger"]
-        self.storage = state["storage"]
-        self.reached = state["reached"]
-        self.current_window_idx = state["current_window_idx"]
-
-        self.windows = {
-            0: ["Предварительная подготовка видео", VideoPreprocessingWindow()],
-            1: ["Настройка трекинг", TrackingWindow],
-            2: ["Редактор трека", EditTrackWindow],
-            3: ["Области интереса", ArenaROIWindow]
-        }
-
+    # def __setstate__(self, state): # TODO: Redefine to serialize and deserealize
+    #     # self.logger = state["logger"]
+    #     self.storage = state["storage"]
+    #     self.reached = state["reached"]
+    #     self.current_window_idx = state["current_window_idx"]
+    #     self.windows = state["windows"]
 
     def save_to_file(self, fpath):
         if fpath:
@@ -54,9 +47,10 @@ class Session(object):
                 # print(data.keys())
                 # print(data.values())
                 try:
-                    pickle.dump(self.__dict__, f, protocol=pickle.HIGHEST_PROTOCOL)
+                    pickle.dump(self, f)
                 except Exception as e:
                     print(e)
+                    print(e.__dict__)
 
     def load_from_file(self, fpath):
         if fpath:
@@ -64,6 +58,6 @@ class Session(object):
                 try:
                     state = pickle.load(f)
                     print(state)
-                    self.__dict__ = state
+                    self.__dict__.update(state)
                 except Exception as e:
                     print(e)
