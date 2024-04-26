@@ -69,7 +69,7 @@ class TrackingWindow(Video, BaseWidget):
     def __setstate__(self, state):
         self.init_video(**state)
 
-        self.tracker = state.get("tracker", Tracker())
+        # self.tracker = state.get("tracker", Tracker())
         videofile = state.get("_player.value", self.fpath)
         if videofile:
             self._player.value = videofile

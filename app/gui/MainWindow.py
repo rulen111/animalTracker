@@ -58,7 +58,7 @@ class MainWindow(BaseWidget):
         # } if "windows" not in kwargs.keys() else kwargs["windows"]
 
         self._panel = ControlEmptyWidget()
-        self.current_window = self.session.windows[self.session.current_window_idx][1]
+        self.current_window = self.session.windows[self.session.current_window_idx][1]()
         self.current_window.parent = self
         self._panel.value = self.current_window
 
@@ -114,17 +114,21 @@ class MainWindow(BaseWidget):
                                                             "Save File", "",
                                                             filter=filter,
                                                             options=options)
-        # if fileName:
-        #     with open(fileName.strip(".atrprj") + ".atrprj", 'wb') as f:
-        #         # data = self.__dict__
-        #         # data.pop("_mainmenu")
-        #         # print(data.keys())
-        #         # print(data.values())
-        #         try:
-        #             pickle.dump(self.__getstate__(), f, protocol=pickle.HIGHEST_PROTOCOL)
-        #         except Exception as e:
-        #             print(e.args)
-        self.session.save_to_file(fileName)
+
+        # self.session.save_to_file(fileName)
+        if fileName:
+            fpath = fileName.split(".")
+            fpath = fpath[0]
+            with open(fpath + ".atpr", 'wb') as f:
+                # data = self.__dict__
+                # data.pop("_mainmenu")
+                # print(data.keys())
+                # print(data.values())
+                try:
+                    # print(self.session.__getstate__())
+                    pickle.dump(self.session.__getstate__(), f, pickle.HIGHEST_PROTOCOL)
+                except Exception as e:
+                    print(e)
 
     def __open(self):
         options = QtWidgets.QFileDialog.Options()
@@ -134,22 +138,25 @@ class MainWindow(BaseWidget):
                                                             "Open File", "",
                                                             filter=filter,
                                                             options=options)
-        # if fileName:
-        #     print(fileName)
-        #     with open(fileName, 'rb') as f:
-        #         try:
-        #             state = pickle.load(f)
-        #             print(state)
-        #             self.__setstate__(state)
-        #             print("tutt")
-        #         except Exception as e:
-        #             print(e)
-        try:
-            session = Session()
-            session.load_from_file(fileName)
-            self.__init__(session=session)
-        except Exception as e:
-            print(e)
+
+        # self.session.load_from_file(fileName)
+        # self.current_window = self.session.windows[self.session.current_window_idx][1]
+        # self.current_window.parent = self
+        # self._panel.value = self.current_window
+        if fileName:
+            with open(fileName, 'rb') as f:
+                try:
+                    # self.session = pickle.load(f)
+                    state = pickle.load(f)
+                    # print(state)
+                    self.session.__setstate__(state)
+                    # self.__dict__.update(state)
+                    # self.__setstate__(state)
+                    self.current_window = self.session.windows[self.session.current_window_idx][1]
+                    self.current_window.parent = self
+                    self._panel.value = self.current_window
+                except Exception as e:
+                    print(e)
 
     def __update_windows(self):
         # for k, item in self.windows.items():
