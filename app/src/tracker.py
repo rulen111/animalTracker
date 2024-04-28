@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
+from datetime import datetime
 
 
 def calc_dist(x, y, xprev, yprev):
@@ -44,6 +45,9 @@ class Tracker(object):
         yvec = np.zeros(vid.tr_range[1] - vid.tr_range[0])
         dvec = np.zeros(vid.tr_range[1] - vid.tr_range[0])
 
+        # tvec = np.zeros(vid.tr_range[1] - vid.tr_range[0], dtype='<U9')
+        tvec = np.zeros(vid.tr_range[1] - vid.tr_range[0])
+
         print(f"Starting tracking")
         for f in tqdm(range(len(dvec))):
             ret, frame = cap.read()
@@ -55,6 +59,15 @@ class Tracker(object):
 
                 xvec[f] = com[1]
                 yvec[f] = com[0]
+
+                msec_float = cap.get(cv2.CAP_PROP_POS_MSEC)
+                # minutes = f"{int(msec_float / 1000.0) // 60:02d}"
+                # seconds = f"{int(msec_float / 1000.0) % 60:02d}"
+                # # milliseconds = f"{str(round(msec_float, 3)).split('.')[-1]:3d}"
+                # milliseconds = f"{int(msec_float % 1000.0):03d}"
+                # timestamp = ":".join([minutes, seconds, milliseconds])
+                # tvec[f] = timestamp
+                tvec[f] = msec_float
                 if f > 0:
                     # dvec[f] = np.sqrt((yvec[f] - yvec[f - 1]) ** 2 + (xvec[f] - xvec[f - 1]) ** 2)
                     dvec[f] = calc_dist(xvec[f], yvec[f], xvec[f - 1], yvec[f - 1])
@@ -63,6 +76,7 @@ class Tracker(object):
                 xvec = xvec[:f]  # Amend length of X vector
                 yvec = yvec[:f]  # Amend length of Y vector
                 dvec = dvec[:f]  # Amend length of D vector
+                tvec = tvec[:f]  # Amend length of D vector
                 break
 
         cap.release()
@@ -73,7 +87,8 @@ class Tracker(object):
         df = pd.DataFrame(
             {'X': xvec,
              'Y': yvec,
-             'Distance_px': dvec
+             'Distance_px': dvec,
+             'Timestamp_msec': tvec
              })
 
         vid.track = df

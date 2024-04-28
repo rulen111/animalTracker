@@ -36,8 +36,8 @@ class EditTrackWindow(Video, BaseWidget):
 
     # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
-        # Video.__init__(self, *args, **kwargs)
-        Video.__init__(self, fpath="../src/test.avi")
+        Video.__init__(self, *args, **kwargs)
+        # Video.__init__(self, fpath="../src/test.avi")
         BaseWidget.__init__(self, 'Редактор трека')
         self.logger = logging.getLogger(__name__)
 
