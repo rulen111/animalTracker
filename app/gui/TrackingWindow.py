@@ -51,12 +51,22 @@ class TrackingWindow(Video, BaseWidget):
 
         self._threshold.changed_event = self.__threshChangeEvent
 
-        self._formset = [
-            ('_selmethod', '_previewbutton'),
-            '_threshold',
-            '_player',
-            '_runbutton'
-        ]
+        # self._formset = [
+        #     ('_selmethod', '_previewbutton'),
+        #     '_threshold',
+        #     '_player',
+        #     '_runbutton'
+        # ]
+        self._formset = (
+            [
+                '_selmethod',
+                '_previewbutton',
+                '_threshold',
+                '_runbutton'
+            ],
+            "||",
+            '_player'
+        )
 
     def __getstate__(self):
         state = self.get_video_state()

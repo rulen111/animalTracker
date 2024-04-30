@@ -73,10 +73,22 @@ class MainWindow(BaseWidget):
         self._nextbutton.value = self.__nextWindowEvent
         self._backbutton.value = self.__prevWindowEvent
 
-        self.formset = [
-            ('_winlist', '_panel'),
-            ('_backbutton', '_nextbutton')
-        ]
+        # self.formset = [
+        #     ('_winlist', '_panel'),
+        #     ('_backbutton', '_nextbutton')
+        # ]
+        self.formset = (
+            '_winlist',
+            "||",
+            [
+                '_panel',
+                "=",
+                (
+                    '_backbutton',
+                    '_nextbutton'
+                )
+            ]
+        )
 
         self.mainmenu = [
             {'File': [

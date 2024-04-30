@@ -59,10 +59,25 @@ class ArenaROIWindow(Video, BaseWidget):
 
         # self.closeEvent = self.__formClosedEvent
 
-        self.formset = [
-            ('_frameimg', '_roilist'),
-            ('_frameslider', '_roiname', '_addbutton', '_clearbutton')
-        ]
+        # self.formset = [
+        #     ('_frameimg', '_roilist'),
+        #     ('_frameslider', '_roiname', '_addbutton', '_clearbutton')
+        # ]
+        self.formset = (
+            [
+                '_frameimg',
+                '_frameslider'
+            ],
+            "||",
+            [
+                '_roilist',
+                (
+                    '_roiname',
+                    '_addbutton',
+                    '_clearbutton'
+                )
+            ]
+        )
 
     def __getstate__(self):
         state = self.get_video_state()

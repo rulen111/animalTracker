@@ -82,10 +82,21 @@ class EditTrackWindow(Video, BaseWidget):
 
         self._savebutton.value = self.__saveTrackButton
 
-        self._formset = [
-            ('_frameimg', '_coordtable'),
-            ('_frameslider', '_savebutton')
-        ]
+        # self._formset = [
+        #     ('_frameimg', '_coordtable'),
+        #     ('_frameslider', '_savebutton')
+        # ]
+        self._formset = (
+            [
+                '_frameimg',
+                '_frameslider'
+            ],
+            "||",
+            [
+                '_coordtable',
+                '_savebutton'
+            ]
+        )
 
     def __getstate__(self):
         state = self.get_video_state()

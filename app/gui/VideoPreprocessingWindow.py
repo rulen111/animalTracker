@@ -69,13 +69,25 @@ class VideoPreprocessingWindow(Video, BaseWidget):
         self._chckmask.changed_event = self.__chckmaskChangedEvent
 
         # Define the organization of the Form Controls
-        self._formset = [
-            ('_videofile', " ", " ", " "),
-            ('_trstart', '_videores', " ", " "),
-            ('_trend', '_chckmask', " ", " "),
-            ('_previewbutton', " ", " "),
+        # self._formset = [
+        #     ('_videofile', " ", " ", " "),
+        #     ('_trstart', '_videores', " ", " "),
+        #     ('_trend', '_chckmask', " ", " "),
+        #     ('_previewbutton', " ", " "),
+        #     '_player'
+        # ]
+        self._formset = (
+            [
+                '_videofile',
+                '_trstart',
+                '_videores',
+                '_trend',
+                '_chckmask',
+                '_previewbutton'
+            ],
+            "||",
             '_player'
-        ]
+        )
 
     def __getstate__(self):
         state = self.get_video_state()
