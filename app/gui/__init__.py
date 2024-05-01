@@ -1,6 +1,10 @@
 import logging
 # import logging.config
+from confapp import conf
+import settings
 
+
+conf += settings
 
 # Create the Logger
 logger = logging.getLogger(__name__)
