@@ -1,5 +1,6 @@
 import logging
 import pickle
+from confapp import conf
 
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog
@@ -13,7 +14,7 @@ from app.gui.EditTrackWindow import EditTrackWindow
 from app.gui.TrackingWindow import TrackingWindow
 from app.gui.VideoPreprocessingWindow import VideoPreprocessingWindow
 from app.gui.session import Session
-from app.src.tracker import Tracker
+# from app.src.tracker import Tracker
 from app.src.video import Video
 
 CONFIG_FILE_PATH = '../config.ini'
@@ -32,7 +33,7 @@ class MainWindow(BaseWidget):
         #     "Редактор трека": EditTrackWindow,
         #     "Области интереса": ArenaROIWindow
         # }
-        self._logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
 
         # self.windows = {
         #     0: ("Предварительная подготовка видео", VideoPreprocessingWindow),
@@ -41,7 +42,8 @@ class MainWindow(BaseWidget):
         #     3: ("Области интереса", ArenaROIWindow)
         # }
 
-        self.session = Session() if "session" not in kwargs.keys() else kwargs["session"]
+        # self.session = Session() if "session" not in kwargs.keys() else kwargs["session"]
+        self.session = kwargs.get("session", Session())
 
         # self.storage = {
         #     "video": Video(),
@@ -57,10 +59,11 @@ class MainWindow(BaseWidget):
         #     3: ["Области интереса", ArenaROIWindow]
         # } if "windows" not in kwargs.keys() else kwargs["windows"]
 
+        self._current_window = self.session.windows[self.session.current_window_idx][1]()
+        self._current_window.parent = self
+
         self._panel = ControlEmptyWidget()
-        self.current_window = self.session.windows[self.session.current_window_idx][1]()
-        self.current_window.parent = self
-        self._panel.value = self.current_window
+        self._panel.value = self._current_window
 
         self._winlist = ControlList("Разделы")
         for idx, window in self.session.windows.items():
@@ -68,15 +71,16 @@ class MainWindow(BaseWidget):
         self._winlist.readonly = True
 
         self._nextbutton = ControlButton("Далее")
-        self._backbutton = ControlButton("Назад")
-
         self._nextbutton.value = self.__nextWindowEvent
+
+        self._backbutton = ControlButton("Назад")
         self._backbutton.value = self.__prevWindowEvent
 
         # self.formset = [
         #     ('_winlist', '_panel'),
         #     ('_backbutton', '_nextbutton')
         # ]
+
         self.formset = (
             '_winlist',
             "||",
@@ -118,7 +122,7 @@ class MainWindow(BaseWidget):
     #     print(self.current_window)
     #     # self._panel.value = self.current_window
 
-    def __save_as(self):
+    def __save_as(self):  # TODO
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
         filter = "Animal Tracker Project(*.atpr)"
@@ -142,7 +146,7 @@ class MainWindow(BaseWidget):
                 except Exception as e:
                     print(e)
 
-    def __open(self):
+    def __open(self):  # TODO
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
         filter = "Animal Tracker Project(*.atpr)"
@@ -164,9 +168,9 @@ class MainWindow(BaseWidget):
                     self.session.__setstate__(state)
                     # self.__dict__.update(state)
                     # self.__setstate__(state)
-                    self.current_window = self.session.windows[self.session.current_window_idx][1]
-                    self.current_window.parent = self
-                    self._panel.value = self.current_window
+                    self._current_window = self.session.windows[self.session.current_window_idx][1]
+                    self._current_window.parent = self
+                    self._panel.value = self._current_window
                 except Exception as e:
                     print(e)
 
@@ -193,16 +197,16 @@ class MainWindow(BaseWidget):
         if ((self.session.reached < (len(self.session.windows.keys()) - 1))
                 and (self.session.reached < self.session.current_window_idx)):
             self.session.reached += 1
-            self.session.storage["video"] = self.current_window.get_video_state()
+            self.session.storage["video"] = self._current_window.get_video_state()
             self.__update_windows()
 
         if self.session.current_window_idx < len(self.session.windows.keys()):
-            self.session.windows[self.session.current_window_idx - 1][1] = self.current_window
-            self.session.storage["video"] = self.current_window.get_video_state()
-            self.current_window = self.session.windows[self.session.current_window_idx][1]
+            self.session.windows[self.session.current_window_idx - 1][1] = self._current_window
+            self.session.storage["video"] = self._current_window.get_video_state()
+            self._current_window = self.session.windows[self.session.current_window_idx][1]
             # self.current_window.video = self.session.storage["video"]
-            self.current_window.init_video(**self.session.storage["video"])
-            self._panel.value = self.current_window
+            self._current_window.init_video(**self.session.storage["video"])
+            self._panel.value = self._current_window
         else:
             return
 
@@ -223,19 +227,23 @@ class MainWindow(BaseWidget):
     def __prevWindowEvent(self):
         # self.current_window.save_win_state()
         if self.session.current_window_idx > 0:
-            self.session.windows[self.session.current_window_idx][1] = self.current_window
-            self.session.storage["video"] = self.current_window.get_video_state()
+            self.session.windows[self.session.current_window_idx][1] = self._current_window
+            self.session.storage["video"] = self._current_window.get_video_state()
             self.session.current_window_idx -= 1
-            self.current_window = self.session.windows[self.session.current_window_idx][1]
+            self._current_window = self.session.windows[self.session.current_window_idx][1]
             # self.current_window.video = self.session.storage["video"]
-            self.current_window.init_video(**self.session.storage["video"])
+            self._current_window.init_video(**self.session.storage["video"])
             # self.current_window.load_win_state()
-            self._panel.value = self.current_window
+            self._panel.value = self._current_window
         else:
             return
 
 
 if __name__ == '__main__':
     from pyforms import start_app
+    from confapp import conf
+    import settings
+
+    conf += settings
 
     start_app(MainWindow)

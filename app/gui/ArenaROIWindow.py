@@ -1,4 +1,5 @@
 import logging
+from confapp import conf
 
 import cv2
 import numpy as np
@@ -10,19 +11,23 @@ from pyforms.controls import ControlList
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlText
 
+from app.src.preprocessing import Preprocessing
+from app.src.roi import ROI
 from app.src.video import Video
 
 
 CONFIG_FILE_PATH = '../config.ini'
 
 
-class ArenaROIWindow(Video, BaseWidget):
+class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
 
     # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
-        Video.__init__(self, *args, **kwargs)
+        # Video.__init__(self, *args, **kwargs)
         # Video.__init__(self, fpath="../src/test.avi")
         BaseWidget.__init__(self, 'Области интереса')
+        Preprocessing.__init__(self, *args, **kwargs)
+        ROI.__init__(self, *args, **kwargs)
         self.logger = logging.getLogger(__name__)
 
         # self.video = Video()
@@ -31,31 +36,34 @@ class ArenaROIWindow(Video, BaseWidget):
 
         self.points_to_draw = []
         self.draw_lines = False
+        self.video = kwargs.get("video", Video())
 
-        cap = cv2.VideoCapture(self.fpath)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, self.tr_range[0])
-        ret, frame = cap.read()
-        frame = self.preprocess_frame(frame)
         self._frameimg = ControlImage()
-        self._frameimg.value = frame
-        cap.release()
-
-        self._addbutton = ControlButton("Добавить область")
-        self._clearbutton = ControlButton("Очистить кадр")
-
-        self._roiname = ControlText("Имя")
-
-        self._frameslider = ControlSlider(default=1, minimum=1, maximum=len(self.track) if np.any(self.track) else 2)
-        self._roilist = ControlList('Области интереса')
-
-        self._frameslider.changed_event = self.__frameSelectionEvent
-        self.keyPressEvent = self.__drawPolyEvent
-
+        if self.video.fpath:
+            cap = cv2.VideoCapture(self.video.fpath)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, self.tracking_interval[0])
+            ret, frame = cap.read()
+            frame = self.preprocess_frame(frame)
+            self._frameimg.value = frame
+            cap.release()
         self._frameimg.click_event = self.__addPointEvent
         self._frameimg.double_click_event = self.__drawPolyEvent
 
+        self._addbutton = ControlButton("Добавить область")
         self._addbutton.value = self.__addRoiEvent
+
+        self._clearbutton = ControlButton("Очистить кадр")
         self._clearbutton.value = self.__clearCanvasEvent
+
+        self._roiname = ControlText("Имя")
+
+        self._frameslider = ControlSlider(default=1, minimum=1,
+                                          maximum=len(self.video.track) if np.any(self.video.track) else 2)
+        self._frameslider.changed_event = self.__frameSelectionEvent
+
+        self._roilist = ControlList('Области интереса')
+
+        self.keyPressEvent = self.__drawPolyEvent
 
         # self.closeEvent = self.__formClosedEvent
 
@@ -63,6 +71,7 @@ class ArenaROIWindow(Video, BaseWidget):
         #     ('_frameimg', '_roilist'),
         #     ('_frameslider', '_roiname', '_addbutton', '_clearbutton')
         # ]
+
         self.formset = (
             [
                 '_frameimg',
@@ -79,7 +88,7 @@ class ArenaROIWindow(Video, BaseWidget):
             ]
         )
 
-    def __getstate__(self):
+    def __getstate__(self):  # TODO
         state = self.get_video_state()
         state["points_to_draw"] = self.points_to_draw
         state["draw_lines"] = self.draw_lines
@@ -89,7 +98,7 @@ class ArenaROIWindow(Video, BaseWidget):
 
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state):  # TODO
         self.init_video(**state)
 
         self.points_to_draw = state.get("points_to_draw", [])
@@ -123,12 +132,12 @@ class ArenaROIWindow(Video, BaseWidget):
     #     self.cap.release()
     #     return event
 
-    def init_video(self, *args, **kwargs):
+    def init_video(self, *args, **kwargs):  # TODO
         for key, value in kwargs.items():
             if key in self.__dict__.keys():
                 self.__dict__[key] = value
 
-    def get_video_state(self):
+    def get_video_state(self):  # TODO
         state = {
             "fpath": self.fpath,
             "folder": self.folder,
@@ -151,15 +160,15 @@ class ArenaROIWindow(Video, BaseWidget):
     def __frameSelectionEvent(self):
         current_frame = int(self._frameslider.value)
 
-        cap = cv2.VideoCapture(self.fpath)
+        cap = cv2.VideoCapture(self.video.fpath)
         cap.set(cv2.CAP_PROP_POS_FRAMES,
-                self.tr_range[0] + (current_frame - 1)
+                self.tracking_interval[0] + (current_frame - 1)
                 )
         ret, frame = cap.read()
         frame = self.preprocess_frame(frame)
 
-        if self.roi:
-            for key, item in self.roi.items():
+        if self.roi_dict:
+            for key, item in self.roi_dict.items():
                 points = np.array(item)
                 frame = cv2.polylines(frame, [points], True, (0, 0, 255))
                 frame = cv2.putText(frame, key,
@@ -197,7 +206,7 @@ class ArenaROIWindow(Video, BaseWidget):
 
     def __addRoiEvent(self):
         if self._roiname.value and self.draw_lines:
-            self.roi[self._roiname.value] = self.points_to_draw
+            self.roi_dict[self._roiname.value] = self.points_to_draw
             roistring = f"{self._roiname.value}: {self.points_to_draw}"
             self._roilist.__add__([roistring])
             self.points_to_draw = []
@@ -214,5 +223,9 @@ class ArenaROIWindow(Video, BaseWidget):
 
 if __name__ == '__main__':
     from pyforms import start_app
+    from confapp import conf
+    import settings
+
+    conf += settings
 
     start_app(ArenaROIWindow)

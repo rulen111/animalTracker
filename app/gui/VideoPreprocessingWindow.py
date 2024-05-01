@@ -1,4 +1,5 @@
 import datetime
+from confapp import conf
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlFile
@@ -7,6 +8,7 @@ from pyforms.controls import ControlPlayer
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlCheckBox
+from pyforms.controls import ControlCombo
 
 from PyQt5.QtCore import Qt, QSettings
 
@@ -15,58 +17,61 @@ import numpy as np
 import logging
 
 from app.gui.controls.VideoPlayer import VideoPlayer
+from app.src.preprocessing import Preprocessing
 from app.src.video import Video
 from app.gui.PreviewWindow import PreviewWindow
-
 
 CONFIG_FILE_PATH = '../config.ini'
 
 
-class VideoPreprocessingWindow(Video, BaseWidget):
+class VideoPreprocessingWindow(Preprocessing, BaseWidget):
 
     def __init__(self, *args, **kwargs):
-        Video.__init__(self, *args, **kwargs)
+        # Video.__init__(self, *args, **kwargs)
         BaseWidget.__init__(self, 'Предварительная подготовка видео')
+        Preprocessing.__init__(self, *args, **kwargs)
         self.logger = logging.getLogger(__name__)
 
         # self.video = Video()
-        # self.video = vid
+        self.video = kwargs.get("video", None)
         self.points_to_draw = kwargs.get("points_to_draw", [])
         self.draw_lines = kwargs.get("draw_lines", False)
 
-        # Definition of the forms fields
+        self._selvideo = ControlCombo('Текущее видео')
+        self._selvideo.add_item("Загрузить новое видео")
+        for file in conf.PROJECT_VIDEO_FILES.keys():
+            self._selvideo.add_item(file)
+
         self._videofile = ControlFile('Video')
-        videofile = kwargs.get("_videofile.value", self.fpath)
+        # videofile = kwargs.get("_videofile.value", self.fpath)
+        videofile = kwargs.get("_videofile.value", None)
         if videofile:
             self._videofile.value = videofile
+        self._videofile.changed_event = self.__videoFileSelectionEvent
+
         self._trstart = ControlText('Start', default=str(kwargs.get("_trstart.value", 0)))
+        self._trstart.changed_event = self.__trstartChangeEvent
+
         self._trend = ControlText('End', default=str(kwargs.get("_trend.value", 0)))
+        self._trend.changed_event = self.__trendChangeEvent
+
         self._videores = ControlNumber(label='Resolution, %', default=kwargs.get("_videores.value", 100),
                                        minimum=0, maximum=100)
+        self._videores.changed_event = self.__videoresChangeEvent
+
         self._chckmask = ControlCheckBox('Define mask')
-        self._chckmask.value = kwargs.get("_chckmask.value", np.any(self.mask))
+        self._chckmask.value = kwargs.get("_chckmask.value", self.mask.any())
+        self._chckmask.changed_event = self.__chckmaskChangedEvent
+
         # self._player = ControlPlayer('Player')
         self._player = VideoPlayer()
         self._player.value = self._videofile.value
-        self._previewbutton = ControlButton('Preview frame')
-
-        # Define the function that will be called when a file is selected
-        self._videofile.changed_event = self.__videoFileSelectionEvent
-        # Define the event that will be called when the run button is processed
-        self._previewbutton.value = self.__previewEvent
-        # Define the event called before showing the image in the player
         self._player.process_frame_event = self.__process_frame
-
         self._player.click_event = self.__clickOnPlayerEvent
-
         self._player.key_press_event = self.__enterKeyPressEvent
 
-        self._trstart.changed_event = self.__trstartChangeEvent
-        self._trend.changed_event = self.__trendChangeEvent
-
-        self._videores.changed_event = self.__videoresChangeEvent
-
-        self._chckmask.changed_event = self.__chckmaskChangedEvent
+        self._previewbutton = ControlButton('Preview frame')
+        self._previewbutton.value = self.__previewEvent
 
         # Define the organization of the Form Controls
         # self._formset = [
@@ -78,6 +83,7 @@ class VideoPreprocessingWindow(Video, BaseWidget):
         # ]
         self._formset = (
             [
+                '_selvideo',
                 '_videofile',
                 '_trstart',
                 '_videores',
@@ -89,7 +95,7 @@ class VideoPreprocessingWindow(Video, BaseWidget):
             '_player'
         )
 
-    def __getstate__(self):
+    def __getstate__(self):  # TODO
         state = self.get_video_state()
         state["points_to_draw"] = self.points_to_draw
         state["draw_lines"] = self.draw_lines
@@ -101,7 +107,7 @@ class VideoPreprocessingWindow(Video, BaseWidget):
 
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state):  # TODO
         self.init_video(**state)
 
         self.points_to_draw = state.get("points_to_draw", [])
@@ -115,13 +121,13 @@ class VideoPreprocessingWindow(Video, BaseWidget):
         self._videores.value = state.get("_videores.value", 100)
         self._chckmask.value = state.get("_chckmask.value", np.any(self.mask))
 
-    def init_video(self, *args, **kwargs):
+    def init_video(self, *args, **kwargs):  # TODO
         # for key, value in kwargs.items():
         #     if key in self.__dict__.keys():
         #         self.__dict__[key] = value
         self.__dict__.update(kwargs)
 
-    def get_video_state(self):
+    def get_video_state(self):  # TODO
         state = {
             "fpath": self.fpath,
             "folder": self.folder,
@@ -164,9 +170,11 @@ class VideoPreprocessingWindow(Video, BaseWidget):
         """
         When the videofile is selected instanciate the video in the player
         """
-        Video.__init__(self, fpath=self._videofile.value)
+        # Video.__init__(self, fpath=self._videofile.value)
+        self.video = Video(fpath=self._videofile.value)
+        self.tracking_interval = [0, self.video.frame_cnt]
         self._player.value = self._videofile.value
-        self._trend.value = str(self.tr_range[1])
+        self._trend.value = str(self.tracking_interval[1])
 
     def __process_frame(self, frame):
         """
@@ -211,7 +219,7 @@ class VideoPreprocessingWindow(Video, BaseWidget):
         if event.key() == 16777220 and len(self.points_to_draw) >= 3:
             self.draw_lines = True
             # self.video.generate_mask(self.points_to_draw)
-            self.generate_mask(self.points_to_draw)
+            self.generate_mask(self.points_to_draw, self.video.shape)
             # self._player.process_frame_event(self._player.frame)
             self._player.refresh()
 
@@ -219,15 +227,15 @@ class VideoPreprocessingWindow(Video, BaseWidget):
 
     def __trstartChangeEvent(self):
         # self.video.tr_range[0] = int(self._trstart.value)
-        self.tr_range[0] = int(self._trstart.value)
+        self.tracking_interval[0] = int(self._trstart.value)
 
     def __trendChangeEvent(self):
         # self.video.tr_range[1] = int(self._trend.value)
-        self.tr_range[1] = int(self._trend.value)
+        self.tracking_interval[1] = int(self._trend.value)
 
     def __videoresChangeEvent(self):
         # self.video.dsmpl = self._videores.value / 100
-        self.dsmpl = self._videores.value / 100
+        self.resolution = self._videores.value / 100
 
     def __chckmaskChangedEvent(self):
         if self._chckmask.value:
@@ -242,5 +250,9 @@ class VideoPreprocessingWindow(Video, BaseWidget):
 
 if __name__ == '__main__':
     from pyforms import start_app
+    from confapp import conf
+    import settings
+
+    conf += settings
 
     start_app(VideoPreprocessingWindow)

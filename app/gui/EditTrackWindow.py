@@ -2,6 +2,7 @@ import logging
 
 import cv2
 import csv
+from confapp import conf
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ from pyforms.controls import ControlSlider
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlTree  # TODO:
 
+from app.src.preprocessing import Preprocessing
 from app.src.video import Video
 from app.gui.models.TableModel import TableModel
 
@@ -32,60 +34,65 @@ def draw_track(frame, points):
     return frame
 
 
-class EditTrackWindow(Video, BaseWidget):
+class EditTrackWindow(Preprocessing, BaseWidget):
 
     # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
-        Video.__init__(self, *args, **kwargs)
+        # Video.__init__(self, *args, **kwargs)
         # Video.__init__(self, fpath="../src/test.avi")
         BaseWidget.__init__(self, 'Редактор трека')
+        Preprocessing.__init__(self, *args, **kwargs)
         self.logger = logging.getLogger(__name__)
 
         # self.video = Video()
         # self.video.load_state("current_video.pckl")
         # self.video = vid
+        # self.multselect = False
+        self.video = kwargs.get("video", Video())
 
         # data = [[f"{coords[0]:.6}", f"{coords[1]:.6}"]
         #         for coords in zip(self.video.track[0], self.video.track[1])]
-        data = self.track if np.any(self.track) else pd.DataFrame({"X": [0.], "Y": [0.], "Distance_px": [0.]})
+        data = self.video.track if np.any(self.video.track) else pd.DataFrame({"X": [0.],
+                                                                               "Y": [0.],
+                                                                               "Distance_px": [0.]})
         self._model = TableModel(data)
-        self.multselect = False
 
-        cap = cv2.VideoCapture(self.fpath)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, self.tr_range[0])
-        ret, frame = cap.read()
-        frame = self.preprocess_frame(frame)
+        self._coordtable = ControlTableView("Координаты")
+        self._coordtable.setModel(self._model)
+        self._coordtable.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+        self._selection_model = self._coordtable.selectionModel()
+        self._selection_model.selectionChanged.connect(self.__tableRowSelectionEvent)
+
         self._frameimg = ControlImage()
-        self._frameimg.value = frame
-        cap.release()
+        try:
+            cap = cv2.VideoCapture(self.video.fpath)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, self.tracking_interval[0])
+            ret, frame = cap.read()
+            frame = self.preprocess_frame(frame)
+            self._frameimg.value = frame
+            cap.release()
+        except Exception:
+            pass
+        self._frameimg.double_click_event = self.__changePointEvent
 
         # self._frameslider = ControlSlider(default=1, minimum=1, maximum=len(self.video.track[0]))
-        self._frameslider = ControlSlider(default=1, minimum=1, maximum=len(self.track) if np.any(self.track) else 2)
+        self._frameslider = ControlSlider(default=1, minimum=1,
+                                          maximum=len(self.video.track) if np.any(self.video.track) else 2)
+        self._frameslider.changed_event = self.__frameSelectionEvent
+
+        self._savebutton = ControlButton('Save track')
+        self._savebutton.value = self.__saveTrackButton
 
         # self._player = ControlPlayer('Player')
         # self._player.value = self.video.fpath
         # self._player.value.set(cv2.CAP_PROP_POS_FRAMES, self.video.tr_range[0])
-
-        self._savebutton = ControlButton('Save track')
-
-        self._coordtable = ControlTableView("Координаты")
-        self._coordtable.setModel(self._model)
-        self.selection_model = self._coordtable.selectionModel()
-        self._coordtable.setSelectionBehavior(QAbstractItemView.SelectRows)
-
         # self.closeEvent = self.__formClosedEvent
-        self._frameslider.changed_event = self.__frameSelectionEvent
-
-        self.selection_model.selectionChanged.connect(self.__tableRowSelectionEvent)
-
-        self._frameimg.double_click_event = self.__changePointEvent
-
-        self._savebutton.value = self.__saveTrackButton
-
         # self._formset = [
         #     ('_frameimg', '_coordtable'),
         #     ('_frameslider', '_savebutton')
         # ]
+
         self._formset = (
             [
                 '_frameimg',
@@ -98,7 +105,7 @@ class EditTrackWindow(Video, BaseWidget):
             ]
         )
 
-    def __getstate__(self):
+    def __getstate__(self):  # TODO
         state = self.get_video_state()
         state["data"] = self._model.get_data()
         state["multselect"] = self.multselect
@@ -107,7 +114,7 @@ class EditTrackWindow(Video, BaseWidget):
 
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state):  # TODO
         self.init_video(**state)
 
         data = state.get("data", None)
@@ -142,12 +149,12 @@ class EditTrackWindow(Video, BaseWidget):
     #     self.cap.release()
     #     return event
 
-    def init_video(self, *args, **kwargs):
+    def init_video(self, *args, **kwargs):  # TODO
         for key, value in kwargs.items():
             if key in self.__dict__.keys():
                 self.__dict__[key] = value
 
-    def get_video_state(self):
+    def get_video_state(self):  # TODO
         state = {
             "fpath": self.fpath,
             "folder": self.folder,
@@ -174,9 +181,9 @@ class EditTrackWindow(Video, BaseWidget):
         if (current_frame - 1) not in selected:
             self._coordtable.selectRow(current_frame - 1)
 
-        cap = cv2.VideoCapture(self.fpath)
+        cap = cv2.VideoCapture(self.video.fpath)
         cap.set(cv2.CAP_PROP_POS_FRAMES,
-                self.tr_range[0] + (current_frame - 1)
+                self.tracking_interval[0] + (current_frame - 1)
                 )
         ret, frame = cap.read()
         frame = self.preprocess_frame(frame)
@@ -206,9 +213,9 @@ class EditTrackWindow(Video, BaseWidget):
         return event, x, y
 
     def __saveTrackButton(self):
-        df_old = self.track
+        df_old = self.video.track
         df_edited = self._model.get_data()
-        self.track = df_edited
+        self.video.track = df_edited
         df_old.to_csv('coords_orig.csv', encoding='utf-8', index=False)
         df_edited.to_csv('coords_edited.csv', encoding='utf-8', index=False)
         # self.video.save_state("current_video.pckl")
@@ -216,5 +223,9 @@ class EditTrackWindow(Video, BaseWidget):
 
 if __name__ == '__main__':
     from pyforms import start_app
+    from confapp import conf
+    import settings
+
+    conf += settings
 
     start_app(EditTrackWindow)
