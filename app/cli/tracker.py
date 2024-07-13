@@ -1,7 +1,9 @@
 import pickle
 
 from scipy.ndimage import center_of_mass
-from app.src.video import Video
+
+from app.cli.preprocessing import Preprocessing
+from app.cli.video import Video
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -96,12 +98,12 @@ def calc_dist(x, y, xprev, yprev):
 #         return df
 
 
-def save_outputv(vid: Video):
+def save_outputv(vid: Video, preproc: Preprocessing):
     cap = cv2.VideoCapture(vid.fpath)  # set file
-    cap.set(cv2.CAP_PROP_POS_FRAMES, vid.tr_range[0])  # set starting frame
+    cap.set(cv2.CAP_PROP_POS_FRAMES, preproc.tracking_interval[0])  # set starting frame
 
     ret, frame = cap.read()  # read frame
-    frame = vid.preprocess_frame(frame)
+    frame = preproc.preprocess_frame(frame)
 
     height, width = int(frame.shape[0]), int(frame.shape[1])
 
@@ -111,12 +113,12 @@ def save_outputv(vid: Video):
                              (width, height),
                              isColor=False)
 
-    cap.set(cv2.CAP_PROP_POS_FRAMES, vid.tr_range[0])
+    cap.set(cv2.CAP_PROP_POS_FRAMES, preproc.tracking_interval[0])
 
-    for f in tqdm(range(vid.tr_range[1] - vid.tr_range[0])):
+    for f in tqdm(range(preproc.tracking_interval[1] - preproc.tracking_interval[0])):
         ret, frame = cap.read()
         if ret:
-            frame = vid.preprocess_frame(frame)
+            frame = preproc.preprocess_frame(frame)
 
             # position = (int(vid.track[0][f]), int(vid.track[1][f]))
             position = (int(vid.track.iloc[f, 0]), int(vid.track.iloc[f, 1]))

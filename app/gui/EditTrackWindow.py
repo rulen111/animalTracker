@@ -16,8 +16,8 @@ from pyforms.controls import ControlSlider
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlTree  # TODO:
 
-from app.src.preprocessing import Preprocessing
-from app.src.video import Video
+from app.cli.preprocessing import Preprocessing
+from app.cli.video import Video
 from app.gui.models.TableModel import TableModel
 
 CONFIG_FILE_PATH = '../config.ini'
@@ -39,16 +39,21 @@ class EditTrackWindow(Preprocessing, BaseWidget):
     # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
         # Video.__init__(self, *args, **kwargs)
-        # Video.__init__(self, fpath="../src/test.avi")
+        # Video.__init__(self, fpath="../cli/test.avi")
         BaseWidget.__init__(self, 'Редактор трека')
-        Preprocessing.__init__(self, *args, **kwargs)
+        # Preprocessing.__init__(self, *args, **kwargs)
+        Preprocessing.__init__(self, resolution=0.5, tracking_interval=(300, 1000))
         self.logger = logging.getLogger(__name__)
 
         # self.video = Video()
         # self.video.load_state("current_video.pckl")
         # self.video = vid
         # self.multselect = False
-        self.video = kwargs.get("video", Video())
+        # self.video = kwargs.get("video", Video())
+        self.video = kwargs.get("video", Video(fpath="../cli/test.avi"))
+        self.video.track = pd.read_csv("../cli/coords.csv")
+        points = [[279, 101], [1169, 114], [1164, 699], [1440, 707], [1440, 983], [287, 986]]
+        self.generate_mask(points, self.video.shape)
 
         # data = [[f"{coords[0]:.6}", f"{coords[1]:.6}"]
         #         for coords in zip(self.video.track[0], self.video.track[1])]

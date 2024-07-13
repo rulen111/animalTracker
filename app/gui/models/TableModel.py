@@ -1,7 +1,7 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 
-from app.src.tracker import calc_dist
+from app.cli.tracker import calc_dist
 
 
 class TableModel(QtCore.QAbstractTableModel):

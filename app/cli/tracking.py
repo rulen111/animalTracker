@@ -4,8 +4,8 @@ import pandas as pd
 from scipy.ndimage import center_of_mass
 from tqdm import tqdm
 
-from app.src.preprocessing import Preprocessing
-from app.src.video import Video
+from app.cli.preprocessing import Preprocessing
+from app.cli.video import Video
 
 
 def calc_dist(x, y, xprev, yprev):

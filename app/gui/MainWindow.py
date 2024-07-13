@@ -14,8 +14,8 @@ from app.gui.EditTrackWindow import EditTrackWindow
 from app.gui.TrackingWindow import TrackingWindow
 from app.gui.VideoPreprocessingWindow import VideoPreprocessingWindow
 from app.gui.session import Session
-# from app.src.tracker import Tracker
-from app.src.video import Video
+# from app.cli.tracker import Tracker
+from app.cli.video import Video
 
 CONFIG_FILE_PATH = '../config.ini'
 

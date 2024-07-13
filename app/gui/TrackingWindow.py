@@ -12,11 +12,11 @@ from pyforms.controls import ControlButton
 from pyforms.controls import ControlSlider
 
 from app.gui.controls.VideoPlayer import VideoPlayer
-from app.src.preprocessing import Preprocessing
-# from app.src.tracker import Tracker, save_outputv
-from app.src.tracker import save_outputv
-from app.src.tracking import Tracking
-from app.src.video import Video
+from app.cli.preprocessing import Preprocessing
+# from app.cli.tracker import Tracker, save_outputv
+from app.cli.tracker import save_outputv
+from app.cli.tracking import Tracking
+from app.cli.video import Video
 from app.gui.PreviewWindow import PreviewWindow
 
 
@@ -29,7 +29,7 @@ class TrackingWindow(Preprocessing, Tracking, BaseWidget):  # TODO: Interactive 
     # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
         # Video.__init__(self, *args, **kwargs)
-        # Video.__init__(self, fpath="../src/test.avi")
+        # Video.__init__(self, fpath="../cli/test.avi")
         BaseWidget.__init__(self, 'Настройка трекинга')
         Preprocessing.__init__(self, *args, **kwargs)
         Tracking.__init__(self, *args, **kwargs)

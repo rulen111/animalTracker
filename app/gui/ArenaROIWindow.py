@@ -1,4 +1,6 @@
 import logging
+
+import pandas as pd
 from confapp import conf
 
 import cv2
@@ -11,9 +13,9 @@ from pyforms.controls import ControlList
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlText
 
-from app.src.preprocessing import Preprocessing
-from app.src.roi import ROI
-from app.src.video import Video
+from app.cli.preprocessing import Preprocessing
+from app.cli.roi import ROI
+from app.cli.video import Video
 
 
 CONFIG_FILE_PATH = '../config.ini'
@@ -24,9 +26,10 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
     # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
         # Video.__init__(self, *args, **kwargs)
-        # Video.__init__(self, fpath="../src/test.avi")
+        # Video.__init__(self, fpath="../cli/test.avi")
         BaseWidget.__init__(self, 'Области интереса')
-        Preprocessing.__init__(self, *args, **kwargs)
+        # Preprocessing.__init__(self, *args, **kwargs)
+        Preprocessing.__init__(self, resolution=0.5, tracking_interval=(300, 1000))
         ROI.__init__(self, *args, **kwargs)
         self.logger = logging.getLogger(__name__)
 
@@ -36,7 +39,11 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
 
         self.points_to_draw = []
         self.draw_lines = False
-        self.video = kwargs.get("video", Video())
+        # self.video = kwargs.get("video", Video())
+        self.video = kwargs.get("video", Video(fpath="../cli/test.avi"))
+        self.video.track = pd.read_csv("../cli/coords.csv")
+        points = [[279, 101], [1169, 114], [1164, 699], [1440, 707], [1440, 983], [287, 986]]
+        self.generate_mask(points, self.video.shape)
 
         self._frameimg = ControlImage()
         if self.video.fpath:
