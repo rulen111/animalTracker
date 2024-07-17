@@ -1,3 +1,5 @@
+import shelve
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -20,6 +22,21 @@ class Tracking(object):
         self.threshold = kwargs.get("threshold", 99.5)
         self.bg_fpath = kwargs.get("bg_fpath", "")
         self.bg_img = kwargs.get("bg_img", np.array([]))
+
+    def save(self, fpath):
+        with shelve.open(fpath) as db:
+            db["Tracking"] = {
+                "method": self.method,
+                "bg_method": self.bg_method,
+                "threshold": self.threshold,
+                "bg_fpath": self.bg_fpath,
+                "bg_img": self.bg_img,
+            }
+
+    def load(self, fpath):
+        with shelve.open(fpath) as db:
+            if "Tracking" in db:
+                self.__dict__.update(db["Tracking"])
 
     def make_bg(self, vid: Video, preproc: Preprocessing, num_frames=50):
         cap = cv2.VideoCapture(vid.fpath) if not self.bg_fpath else cv2.VideoCapture(self.bg_fpath)

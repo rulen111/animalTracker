@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+import shelve
+
 
 class Preprocessing(object):
 
@@ -8,6 +10,19 @@ class Preprocessing(object):
         self.resolution = kwargs.get("resolution", 1.)
         self.tracking_interval = kwargs.get("tracking_interval", None)
         self.mask = kwargs.get("mask", np.array([]))
+
+    def save(self, fpath):
+        with shelve.open(fpath) as db:
+            db["Preprocessing"] = {
+                "resolution": self.resolution,
+                "tracking_interval": self.tracking_interval,
+                "mask": self.mask,
+            }
+
+    def load(self, fpath):
+        with shelve.open(fpath) as db:
+            if "Preprocessing" in db:
+                self.__dict__.update(db["Preprocessing"])
 
     def resize_frame(self, frame):
         frame_rs = cv2.resize(frame,

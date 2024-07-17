@@ -1,3 +1,5 @@
+import shelve
+
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -43,6 +45,20 @@ class Video(object):
     # def load_state(self, fpath):
     #     with open(fpath, 'rb') as f:
     #         self.__dict__ = pickle.load(f)
+
+    def save(self, fpath):
+        with shelve.open(fpath) as db:
+            db["Video"] = {
+                "fpath": self.fpath,
+                "tracked": self.tracked,
+                "track": self.track,
+            }
+
+    def load(self, fpath):
+        with shelve.open(fpath) as db:
+            if "Video" in db:
+                self.__dict__.update(db["Video"])
+                self.load_video()
 
     def load_video(self):
         cap = cv2.VideoCapture(self.fpath)

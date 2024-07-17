@@ -19,31 +19,21 @@ from app.cli.video import Video
 
 
 CONFIG_FILE_PATH = '../config.ini'
+OBJECT_FILE_PATH = "../udp"
 
 
 class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
-
-    # def __init__(self, vid: Video, *args, **kwargs):
     def __init__(self, *args, **kwargs):
-        # Video.__init__(self, *args, **kwargs)
-        # Video.__init__(self, fpath="../cli/test.avi")
         BaseWidget.__init__(self, 'Области интереса')
-        # Preprocessing.__init__(self, *args, **kwargs)
         Preprocessing.__init__(self, resolution=0.5, tracking_interval=(300, 1000))
         ROI.__init__(self, *args, **kwargs)
-        self.logger = logging.getLogger(__name__)
-
-        # self.video = Video()
-        # self.video.load_state("current_video.pckl")
-        # self.video = vid
+        # self.logger = logging.getLogger(__name__)
 
         self.points_to_draw = []
         self.draw_lines = False
-        # self.video = kwargs.get("video", Video())
-        self.video = kwargs.get("video", Video(fpath="../cli/test.avi"))
-        self.video.track = pd.read_csv("../cli/coords.csv")
-        points = [[279, 101], [1169, 114], [1164, 699], [1440, 707], [1440, 983], [287, 986]]
-        self.generate_mask(points, self.video.shape)
+
+        self.video = Video()
+        self.video.load(OBJECT_FILE_PATH)
 
         self._frameimg = ControlImage()
         if self.video.fpath:
@@ -72,13 +62,6 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
 
         self.keyPressEvent = self.__drawPolyEvent
 
-        # self.closeEvent = self.__formClosedEvent
-
-        # self.formset = [
-        #     ('_frameimg', '_roilist'),
-        #     ('_frameslider', '_roiname', '_addbutton', '_clearbutton')
-        # ]
-
         self.formset = (
             [
                 '_frameimg',
@@ -95,74 +78,39 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
             ]
         )
 
-    def __getstate__(self):  # TODO
-        state = self.get_video_state()
-        state["points_to_draw"] = self.points_to_draw
-        state["draw_lines"] = self.draw_lines
-        state["_frameimg.value"] = self._frameimg.value
-        state["_frameslider.value"] = self._frameslider.value
-        state["_roilist.value"] = self._roilist.value
+        self.load_win_state()
 
-        return state
+    def save_win_state(self):
+        self.video.save(OBJECT_FILE_PATH)
+        Preprocessing.save(self, OBJECT_FILE_PATH)
+        ROI.save(self, OBJECT_FILE_PATH)
 
-    def __setstate__(self, state):  # TODO
-        self.init_video(**state)
+        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
 
-        self.points_to_draw = state.get("points_to_draw", [])
-        self.draw_lines = state.get("draw_lines", False)
-        img = state.get("_frameimg.value", None)
-        if img:
-            self._frameimg.value = img
-        self._frameslider.value = state.get("_frameslider.value", 1)
-        rois = state.get("_roilist.value", None)
-        if rois:
-            self._roilist.value = rois
+        session.setValue('ROIWin/WindowState', self.save_form())
+        session.setValue('ROIWin/Geometry', self.saveGeometry())
 
-    # def __getstate__(self):
-    #     state = {
-    #         "video": self.video
-    #     }
-    #     return state
-    #
-    # def save_win_state(self):
-    #     settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
-    #     settings.setValue('ROIWin_WindowState', self.save_form())
-    #
-    # def load_win_state(self):
-    #     settings = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
-    #
-    #     state = settings.value('ROIWin_WindowState')
-    #     if state:
-    #         self.load_form(state)
-    #
-    # def __formClosedEvent(self, event):
-    #     self.cap.release()
-    #     return event
+        session.setValue("ROIWin/points_to_draw", self.points_to_draw if self.points_to_draw else "empty")
+        session.setValue("ROIWin/draw_lines", 1 if self.draw_lines else 0)
 
-    def init_video(self, *args, **kwargs):  # TODO
-        for key, value in kwargs.items():
-            if key in self.__dict__.keys():
-                self.__dict__[key] = value
+    def load_win_state(self):
+        self.video.load(OBJECT_FILE_PATH)
+        Preprocessing.load(self, OBJECT_FILE_PATH)
+        ROI.load(self, OBJECT_FILE_PATH)
 
-    def get_video_state(self):  # TODO
-        state = {
-            "fpath": self.fpath,
-            "folder": self.folder,
-            "fname": self.fname,
-            "bg_fpath": self.bg_fpath,
-            "dsmpl": self.dsmpl,
-            "bg_ref": self.bg_ref,
-            "frame_cnt": self.frame_cnt,
-            "frame_rate": self.frame_rate,
-            "shape": self.shape,
-            "tr_range": self.tr_range,
-            "tracked": self.tracked,
-            "track": self.track,
-            "mask": self.mask,
-            "roi": self.roi
-        }
+        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
 
-        return state
+        state = session.value('ROIWin/WindowState')
+        if state:
+            self.load_form(state)
+
+        geometry = session.value('ROIWin/Geometry')
+        if geometry:
+            self.restoreGeometry(geometry)
+
+        self.points_to_draw = session.value("ROIWin/points_to_draw", [])
+        self.points_to_draw = [] if self.points_to_draw == "empty" else self.points_to_draw
+        self.draw_lines = bool(int(session.value("ROIWin/draw_lines", 0)))
 
     def __frameSelectionEvent(self):
         current_frame = int(self._frameslider.value)
@@ -219,6 +167,7 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
             self.points_to_draw = []
             self.draw_lines = False
             self._roiname.value = ""
+            self.video.save(OBJECT_FILE_PATH)
             # self.video.save_state("current_video.pckl")
             self.__frameSelectionEvent()
 
@@ -226,6 +175,10 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
         self.points_to_draw = []
         self.draw_lines = False
         self.__frameSelectionEvent()
+
+    def closeEvent(self, event):
+        self.save_win_state()
+        super().closeEvent(event)
 
 
 if __name__ == '__main__':
