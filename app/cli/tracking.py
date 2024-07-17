@@ -1,3 +1,5 @@
+import pathlib
+import pickle
 import shelve
 
 import cv2
@@ -24,19 +26,47 @@ class Tracking(object):
         self.bg_img = kwargs.get("bg_img", np.array([]))
 
     def save(self, fpath):
-        with shelve.open(fpath) as db:
-            db["Tracking"] = {
+        # with shelve.open(fpath) as db:
+        #     db["Tracking"] = {
+        #         "method": self.method,
+        #         "bg_method": self.bg_method,
+        #         "threshold": self.threshold,
+        #         "bg_fpath": self.bg_fpath,
+        #         "bg_img": self.bg_img,
+        #     }
+
+        if pathlib.Path(fpath).exists():
+            with open(fpath, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
+
+        temp.update({
+            "Tracking": {
                 "method": self.method,
                 "bg_method": self.bg_method,
                 "threshold": self.threshold,
                 "bg_fpath": self.bg_fpath,
                 "bg_img": self.bg_img,
             }
+        })
+
+        with open(fpath, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load(self, fpath):
-        with shelve.open(fpath) as db:
-            if "Tracking" in db:
-                self.__dict__.update(db["Tracking"])
+        # with shelve.open(fpath) as db:
+        #     if "Tracking" in db:
+        #         self.__dict__.update(db["Tracking"])
+
+        if pathlib.Path(fpath).exists():
+            with open(fpath, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        if "Tracking" in entries:
+            self.__dict__.update(entries["Tracking"])
 
     def make_bg(self, vid: Video, preproc: Preprocessing, num_frames=50):
         cap = cv2.VideoCapture(vid.fpath) if not self.bg_fpath else cv2.VideoCapture(self.bg_fpath)

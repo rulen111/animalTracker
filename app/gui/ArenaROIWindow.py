@@ -1,4 +1,6 @@
 import logging
+import pathlib
+import pickle
 
 import pandas as pd
 from confapp import conf
@@ -19,7 +21,7 @@ from app.cli.video import Video
 
 
 CONFIG_FILE_PATH = '../config.ini'
-OBJECT_FILE_PATH = "../udp"
+OBJECT_FILE_PATH = "../session.atr"
 
 
 class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
@@ -85,32 +87,70 @@ class ArenaROIWindow(Preprocessing, ROI, BaseWidget):
         Preprocessing.save(self, OBJECT_FILE_PATH)
         ROI.save(self, OBJECT_FILE_PATH)
 
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # session.setValue('ROIWin/WindowState', self.save_form())
+        # session.setValue('ROIWin/Geometry', self.saveGeometry())
+        #
+        # session.setValue("ROIWin/points_to_draw", self.points_to_draw if self.points_to_draw else "empty")
+        # session.setValue("ROIWin/draw_lines", 1 if self.draw_lines else 0)
 
-        session.setValue('ROIWin/WindowState', self.save_form())
-        session.setValue('ROIWin/Geometry', self.saveGeometry())
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
 
-        session.setValue("ROIWin/points_to_draw", self.points_to_draw if self.points_to_draw else "empty")
-        session.setValue("ROIWin/draw_lines", 1 if self.draw_lines else 0)
+        temp.update({
+            "ROIWin": {
+                "WindowState": self.save_form(),
+                "Geometry": self.saveGeometry(),
+                "points_to_draw": self.points_to_draw if self.points_to_draw else "empty",
+                "draw_lines": 1 if self.draw_lines else 0,
+            },
+        })
+
+        with open(OBJECT_FILE_PATH, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_win_state(self):
         self.video.load(OBJECT_FILE_PATH)
         Preprocessing.load(self, OBJECT_FILE_PATH)
         ROI.load(self, OBJECT_FILE_PATH)
 
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # state = session.value('ROIWin/WindowState')
+        # if state:
+        #     self.load_form(state)
+        #
+        # geometry = session.value('ROIWin/Geometry')
+        # if geometry:
+        #     self.restoreGeometry(geometry)
+        #
+        # self.points_to_draw = session.value("ROIWin/points_to_draw", [])
+        # self.points_to_draw = [] if self.points_to_draw == "empty" else self.points_to_draw
+        # self.draw_lines = bool(int(session.value("ROIWin/draw_lines", 0)))
 
-        state = session.value('ROIWin/WindowState')
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        session = entries.get("ROIWin", {})
+
+        state = session.get('WindowState', None)
         if state:
             self.load_form(state)
 
-        geometry = session.value('ROIWin/Geometry')
+        geometry = session.get('Geometry', None)
         if geometry:
             self.restoreGeometry(geometry)
 
-        self.points_to_draw = session.value("ROIWin/points_to_draw", [])
+        self.points_to_draw = session.get("points_to_draw", [])
         self.points_to_draw = [] if self.points_to_draw == "empty" else self.points_to_draw
-        self.draw_lines = bool(int(session.value("ROIWin/draw_lines", 0)))
+        self.draw_lines = bool(int(session.get("draw_lines", 0)))
 
     def __frameSelectionEvent(self):
         current_frame = int(self._frameslider.value)

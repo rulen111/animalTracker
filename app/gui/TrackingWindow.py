@@ -1,3 +1,6 @@
+import pathlib
+import pickle
+
 import numpy as np
 
 from PyQt5.QtCore import QSettings
@@ -14,7 +17,7 @@ from app.gui.PreviewWindow import PreviewWindow
 
 
 CONFIG_FILE_PATH = '../config.ini'
-OBJECT_FILE_PATH = "../udp"
+OBJECT_FILE_PATH = "../session.atr"
 
 
 class TrackingWindow(Preprocessing, Tracking, BaseWidget):  # TODO: Interactive threshold definition (draw blobs on
@@ -65,10 +68,26 @@ class TrackingWindow(Preprocessing, Tracking, BaseWidget):  # TODO: Interactive 
         Preprocessing.save(self, OBJECT_FILE_PATH)
         Tracking.save(self, OBJECT_FILE_PATH)
 
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # session.setValue('TRWin/WindowState', self.save_form())
+        # session.setValue('TRWin/Geometry', self.saveGeometry())
 
-        session.setValue('TRWin/WindowState', self.save_form())
-        session.setValue('TRWin/Geometry', self.saveGeometry())
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
+
+        temp.update({
+            "TRWin": {
+                "WindowState": self.save_form(),
+                "Geometry": self.saveGeometry(),
+            },
+        })
+
+        with open(OBJECT_FILE_PATH, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_win_state(self):
         self.video.load(OBJECT_FILE_PATH)
@@ -76,13 +95,29 @@ class TrackingWindow(Preprocessing, Tracking, BaseWidget):  # TODO: Interactive 
         Preprocessing.load(self, OBJECT_FILE_PATH)
         Tracking.load(self, OBJECT_FILE_PATH)
 
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # state = session.value('TRWin/WindowState')
+        # if state:
+        #     self.load_form(state)
+        #
+        # geometry = session.value('TRWin/Geometry')
+        # if geometry:
+        #     self.restoreGeometry(geometry)
 
-        state = session.value('TRWin/WindowState')
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        session = entries.get("TRWin", {})
+
+        state = session.get('WindowState', None)
         if state:
             self.load_form(state)
 
-        geometry = session.value('TRWin/Geometry')
+        geometry = session.get('Geometry', None)
         if geometry:
             self.restoreGeometry(geometry)
 

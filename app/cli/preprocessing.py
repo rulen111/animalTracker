@@ -1,3 +1,6 @@
+import pathlib
+import pickle
+
 import cv2
 import numpy as np
 
@@ -12,17 +15,43 @@ class Preprocessing(object):
         self.mask = kwargs.get("mask", np.array([]))
 
     def save(self, fpath):
-        with shelve.open(fpath) as db:
-            db["Preprocessing"] = {
+        # with shelve.open(fpath) as db:
+        #     db["Preprocessing"] = {
+        #         "resolution": self.resolution,
+        #         "tracking_interval": self.tracking_interval,
+        #         "mask": self.mask,
+        #     }
+
+        if pathlib.Path(fpath).exists():
+            with open(fpath, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
+
+        temp.update({
+            "Preprocessing": {
                 "resolution": self.resolution,
                 "tracking_interval": self.tracking_interval,
                 "mask": self.mask,
             }
+        })
+
+        with open(fpath, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load(self, fpath):
-        with shelve.open(fpath) as db:
-            if "Preprocessing" in db:
-                self.__dict__.update(db["Preprocessing"])
+        # with shelve.open(fpath) as db:
+        #     if "Preprocessing" in db:
+        #         self.__dict__.update(db["Preprocessing"])
+
+        if pathlib.Path(fpath).exists():
+            with open(fpath, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        if "Preprocessing" in entries:
+            self.__dict__.update(entries["Preprocessing"])
 
     def resize_frame(self, frame):
         frame_rs = cv2.resize(frame,

@@ -1,3 +1,6 @@
+import pathlib
+import pickle
+
 from PyQt5.QtCore import QSettings
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlEmptyWidget
@@ -10,7 +13,7 @@ from app.gui.TrackingWindow import TrackingWindow
 from app.gui.VideoPreprocessingWindow import VideoPreprocessingWindow
 
 CONFIG_FILE_PATH = '../config.ini'
-OBJECT_FILE_PATH = "../udp"
+OBJECT_FILE_PATH = "../session.atr"
 
 
 class MainWindow(BaseWidget):
@@ -122,19 +125,51 @@ class MainWindow(BaseWidget):
     #                 print(e)
 
     def save_win_state(self):
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # session.setValue('MainWin/WindowState', self.save_form())
+        # session.setValue('MainWin/Geometry', self.saveGeometry())
 
-        session.setValue('MainWin/WindowState', self.save_form())
-        session.setValue('MainWin/Geometry', self.saveGeometry())
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
+
+        temp.update({
+            "MainWin": {
+                "WindowState": self.save_form(),
+                "Geometry": self.saveGeometry(),
+            },
+        })
+
+        with open(OBJECT_FILE_PATH, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_win_state(self):
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # state = session.value('MainWin/WindowState')
+        # if state:
+        #     self.load_form(state)
+        #
+        # geometry = session.value('MainWin/Geometry')
+        # if geometry:
+        #     self.restoreGeometry(geometry)
 
-        state = session.value('MainWin/WindowState')
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        session = entries.get("MainWin", {})
+
+        state = session.get('WindowState', None)
         if state:
             self.load_form(state)
 
-        geometry = session.value('MainWin/Geometry')
+        geometry = session.get('Geometry', None)
         if geometry:
             self.restoreGeometry(geometry)
 

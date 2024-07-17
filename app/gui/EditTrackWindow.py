@@ -1,4 +1,6 @@
 import logging
+import pathlib
+import pickle
 
 import cv2
 import csv
@@ -21,7 +23,7 @@ from app.cli.video import Video
 from app.gui.models.TableModel import TableModel
 
 CONFIG_FILE_PATH = '../config.ini'
-OBJECT_FILE_PATH = "../udp"
+OBJECT_FILE_PATH = "../udp.dat"
 
 
 def draw_track(frame, points):
@@ -94,22 +96,54 @@ class EditTrackWindow(Preprocessing, BaseWidget):
         self.video.save(OBJECT_FILE_PATH)
         Preprocessing.save(self, OBJECT_FILE_PATH)
 
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # session.setValue('EditTRWin/WindowState', self.save_form())
+        # session.setValue('EditTRWinTRWin/Geometry', self.saveGeometry())
 
-        session.setValue('EditTRWin/WindowState', self.save_form())
-        session.setValue('EditTRWinTRWin/Geometry', self.saveGeometry())
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
+
+        temp.update({
+            "EditTRWin": {
+                "WindowState": self.save_form(),
+                "Geometry": self.saveGeometry(),
+            },
+        })
+
+        with open(OBJECT_FILE_PATH, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_win_state(self):
         self.video.load(OBJECT_FILE_PATH)
         Preprocessing.load(self, OBJECT_FILE_PATH)
 
-        session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        # session = QSettings(CONFIG_FILE_PATH, QSettings.IniFormat)
+        #
+        # state = session.value('EditTRWin/WindowState')
+        # if state:
+        #     self.load_form(state)
+        #
+        # geometry = session.value('EditTRWin/Geometry')
+        # if geometry:
+        #     self.restoreGeometry(geometry)
 
-        state = session.value('EditTRWin/WindowState')
+        if pathlib.Path(OBJECT_FILE_PATH).exists():
+            with open(OBJECT_FILE_PATH, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        session = entries.get("EditTRWin", {})
+
+        state = session.get('WindowState', None)
         if state:
             self.load_form(state)
 
-        geometry = session.value('EditTRWin/Geometry')
+        geometry = session.get('Geometry', None)
         if geometry:
             self.restoreGeometry(geometry)
 

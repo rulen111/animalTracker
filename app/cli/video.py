@@ -1,3 +1,4 @@
+import pathlib
 import shelve
 
 import cv2
@@ -47,18 +48,44 @@ class Video(object):
     #         self.__dict__ = pickle.load(f)
 
     def save(self, fpath):
-        with shelve.open(fpath) as db:
-            db["Video"] = {
+        # with shelve.open(fpath) as db:
+        #     db["Video"] = {
+        #         "fpath": self.fpath,
+        #         "tracked": self.tracked,
+        #         "track": self.track,
+        #     }
+        if pathlib.Path(fpath).exists():
+            with open(fpath, "rb") as f:
+                temp = pickle.load(f)
+        else:
+            temp = {}
+
+        temp.update({
+            "Video": {
                 "fpath": self.fpath,
                 "tracked": self.tracked,
                 "track": self.track,
             }
+        })
+
+        with open(fpath, "wb") as f:
+            pickle.dump(temp, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load(self, fpath):
-        with shelve.open(fpath) as db:
-            if "Video" in db:
-                self.__dict__.update(db["Video"])
-                self.load_video()
+        # with shelve.open(fpath) as db:
+        #     if "Video" in db:
+        #         self.__dict__.update(db["Video"])
+        #         self.load_video()
+
+        if pathlib.Path(fpath).exists():
+            with open(fpath, "rb") as f:
+                entries = pickle.load(f)
+        else:
+            return
+
+        if "Video" in entries:
+            self.__dict__.update(entries["Video"])
+            self.load_video()
 
     def load_video(self):
         cap = cv2.VideoCapture(self.fpath)
